@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, touch-action: manipulation">
+    <title>六下小自主P102T7</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            touch-action: pan-x pan-y;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+            z-index: 20;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border-left: 4px solid #ffaa44;
+        }
+        #controls-tip {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            color: #ccc;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            font-family: monospace;
+            z-index: 20;
+        }
+        #click-tip {
+            position: absolute;
+            bottom: 20px;
+            right: 120px; /* 为按钮留出空间 */
+            background: rgba(0,0,0,0.6);
+            color: #ffaa66;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            pointer-events: none;
+            font-family: monospace;
+            z-index: 20;
+            border-right: 2px solid #ffaa66;
+        }
+        #reset-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30,30,50,0.85);
+            backdrop-filter: blur(8px);
+            color: #ffaa66;
+            border: 1px solid #ffaa66;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: monospace;
+            cursor: pointer;
+            z-index: 30;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
+        }
+        #reset-btn:hover {
+            background: #ffaa66;
+            color: #1e1e2e;
+            transform: scale(1.02);
+        }
+        #reset-btn:active {
+            transform: scale(0.98);
+        }
+        @media (max-width: 600px) {
+            #info { font-size: 16px; top: 12px; left: 12px; padding: 8px 12px; }
+            #controls-tip { font-size: 9px; }
+            #click-tip { font-size: 12px; bottom: 12px; right: 100px; padding: 6px 12px; }
+            #reset-btn { padding: 6px 14px; font-size: 12px; bottom: 12px; right: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        求涂色部分的面积（楼梯的正面）
+    </div>
+    <div id="controls-tip">
+        🖱️ 手指/鼠标拖动旋转视角 | 双指/滚轮缩放
+    </div>
+    <div id="click-tip">
+        🔴 🔵 点击移动/返回
+    </div>
+    <button id="reset-btn">⟳ 一键复位</button>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111122);
+        scene.fog = new THREE.FogExp2(0x111122, 0.008);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(4.5, 2.8, 6.0);
+        camera.lookAt(0, 0.7, 1.6);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 轨道控制 (支持触摸) ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.touchRotate = true;
+        controls.touchZoom = true;
+        controls.target.set(0, 0.7, 1.6);
+        controls.update();
+
+        // --- 灯光 ---
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(4, 6, 2);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 10;
+        dirLight.shadow.camera.left = -3;
+        dirLight.shadow.camera.right = 3;
+        dirLight.shadow.camera.top = 3;
+        dirLight.shadow.camera.bottom = -3;
+        scene.add(dirLight);
+        
+        const backLight = new THREE.PointLight(0x8866aa, 0.3);
+        backLight.position.set(-1.5, 1.5, -2);
+        scene.add(backLight);
+        
+        const fillLight = new THREE.PointLight(0xccaa88, 0.35);
+        fillLight.position.set(1, 1.5, 3);
+        scene.add(fillLight);
+        
+        // 参考网格
+        const gridHelper = new THREE.GridHelper(8, 20, 0x88aaff, 0x335588);
+        gridHelper.position.y = -0.1;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.3;
+        scene.add(gridHelper);
+        
+        // 阴影接收地面
+        const shadowReceiver = new THREE.Mesh(
+            new THREE.PlaneGeometry(6, 6),
+            new THREE.ShadowMaterial({ opacity: 0.4, color: 0x000000, transparent: true, side: THREE.DoubleSide })
+        );
+        shadowReceiver.rotation.x = -Math.PI / 2;
+        shadowReceiver.position.y = -0.09;
+        shadowReceiver.receiveShadow = true;
+        scene.add(shadowReceiver);
+
+        // --- 楼梯参数 ---
+        const stepsCount = 8;
+        const stepWidth = 2.0;       // 宽 2m (X轴)
+        const stepHeight = 1.4 / 8;   // 高 0.175m (Y轴)
+        const stepDepth = 3.2 / 8;    // 深 0.4m (Z轴)
+        
+        // 材质
+        const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xbc9a6c, roughness: 0.5, metalness: 0.1 });
+        const redMaterial = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.3, metalness: 0.05, emissive: 0x331100, emissiveIntensity: 0.08 });
+        const blueMaterial = new THREE.MeshStandardMaterial({ color: 0x88aaff, roughness: 0.3, metalness: 0.05, emissive: 0x001133, emissiveIntensity: 0.06 });
+        
+        // 存储所有活动部件
+        const stepsData = [];
+        
+        const totalHeight = stepsCount * stepHeight;        // 1.4m
+        const totalLength = stepsCount * stepDepth;         // 3.2m
+        
+        // 红色板厚度
+        const redThick = 0.04;
+        // 红色板上升目标Y：放在楼梯最顶部上方
+        const redTargetY = totalHeight + redThick / 2;
+        
+        // 蓝色板厚度（前面板/踢面）
+        const blueThick = 0.04;
+        
+        // === 1. 下方完全实心填充（完整底板 + 阶梯填充） ===
+        // 1.1 一个薄底板覆盖整个楼梯投影
+        const basePlate = new THREE.Mesh(
+            new THREE.BoxGeometry(stepWidth, 0.02, totalLength),
+            woodMaterial
+        );
+        basePlate.position.set(0, 0.01, totalLength / 2);
+        basePlate.castShadow = false;
+        basePlate.receiveShadow = true;
+        scene.add(basePlate);
+        
+        // 1.2 阶梯填充
+        for (let i = 0; i < stepsCount; i++) {
+            const stairBottomY = i * stepHeight;
+            const fillHeight = stairBottomY - 0.02;
+            if (fillHeight > 0.01) {
+                const fillBlock = new THREE.Mesh(
+                    new THREE.BoxGeometry(stepWidth, fillHeight, stepDepth),
+                    woodMaterial
+                );
+                const centerZ = i * stepDepth + stepDepth / 2;
+                fillBlock.position.set(0, 0.02 + fillHeight / 2, centerZ);
+                fillBlock.castShadow = false;
+                fillBlock.receiveShadow = true;
+                scene.add(fillBlock);
+            }
+        }
+        
+        // 先创建所有基座和红蓝板，获取第一级蓝色面的原始Z作为目标
+        let firstBlueZ = null;
+        const tempData = [];
+        
+        for (let i = 0; i < stepsCount; i++) {
+            const baseY = i * stepHeight;
+            const centerY = baseY + stepHeight / 2;
+            const centerZ = i * stepDepth + stepDepth / 2;
+            
+            // 木质基座
+            const woodBase = new THREE.Mesh(
+                new THREE.BoxGeometry(stepWidth, stepHeight, stepDepth),
+                woodMaterial
+            );
+            woodBase.position.set(0, centerY, centerZ);
+            woodBase.castShadow = true;
+            woodBase.receiveShadow = true;
+            scene.add(woodBase);
+            
+            // 红色踏面
+            const redPlate = new THREE.Mesh(
+                new THREE.BoxGeometry(stepWidth, redThick, stepDepth),
+                redMaterial
+            );
+            const redOriginalY = centerY + stepHeight / 2 + redThick / 2;
+            redPlate.position.set(0, redOriginalY, centerZ);
+            redPlate.castShadow = true;
+            redPlate.receiveShadow = true;
+            scene.add(redPlate);
+            
+            // 蓝色踢面（放在台阶前表面外侧，即 -Z 方向）
+            const bluePlate = new THREE.Mesh(
+                new THREE.BoxGeometry(stepWidth, stepHeight, blueThick),
+                blueMaterial
+            );
+            const blueOriginalZ = centerZ - stepDepth / 2 - blueThick / 2;
+            bluePlate.position.set(0, centerY, blueOriginalZ);
+            bluePlate.castShadow = true;
+            bluePlate.receiveShadow = true;
+            scene.add(bluePlate);
+            
+            if (i === 0) firstBlueZ = blueOriginalZ;
+            
+            tempData.push({
+                red: redPlate,
+                blue: bluePlate,
+                originalRedY: redOriginalY,
+                originalBlueZ: blueOriginalZ,
+                redAtTop: false,
+                blueAtTarget: false
+            });
+        }
+        
+        // 第二遍，设置每个蓝色板的目标Z为第一级的原始Z
+        for (let i = 0; i < stepsCount; i++) {
+            const data = tempData[i];
+            stepsData.push({
+                red: data.red,
+                blue: data.blue,
+                originalRedY: data.originalRedY,
+                originalBlueZ: data.originalBlueZ,
+                redAtTop: false,
+                blueAtTarget: false,
+                redTargetY: redTargetY,
+                blueTargetZ: firstBlueZ
+            });
+        }
+        
+        // === 3. 添加CSS2D文字标注（尺寸标注保留） ===
+        function makeLabel(text, color, position, fontSize = '14px') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.style.color = color;
+            div.style.fontSize = fontSize;
+            div.style.fontWeight = 'bold';
+            div.style.textShadow = '1px 1px 0px rgba(0,0,0,0.5)';
+            div.style.backgroundColor = 'rgba(0,0,0,0.6)';
+            div.style.padding = '4px 10px';
+            div.style.borderRadius = '20px';
+            div.style.border = `1px solid ${color}`;
+            div.style.fontFamily = 'monospace';
+            div.style.backdropFilter = 'blur(4px)';
+            div.style.whiteSpace = 'nowrap';
+            const label = new CSS2DObject(div);
+            label.position.copy(position);
+            scene.add(label);
+            return label;
+        }
+        
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xffaa66 });
+        
+        // 总长
+        const lengthLineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(stepWidth / 2 + 0.35, -0.1, 0),
+            new THREE.Vector3(stepWidth / 2 + 0.35, -0.1, totalLength)
+        ]);
+        scene.add(new THREE.Line(lengthLineGeo, lineMat));
+        makeLabel(`总长 ${totalLength.toFixed(1)}m`, '#ffaa66', new THREE.Vector3(stepWidth / 2 + 0.55, -0.1, totalLength / 2));
+        
+        // 总高
+        const heightLineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-stepWidth / 2 - 0.35, 0, -0.3),
+            new THREE.Vector3(-stepWidth / 2 - 0.35, totalHeight, -0.3)
+        ]);
+        scene.add(new THREE.Line(heightLineGeo, lineMat));
+        makeLabel(`总高 ${totalHeight.toFixed(1)}m`, '#ffaa66', new THREE.Vector3(-stepWidth / 2 - 0.55, totalHeight / 2, -0.3));
+        
+        // 总宽
+        const widthLineGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-stepWidth / 2, -0.1, -0.5),
+            new THREE.Vector3(stepWidth / 2, -0.1, -0.5)
+        ]);
+        scene.add(new THREE.Line(widthLineGeo, lineMat));
+        makeLabel(`总宽 ${stepWidth.toFixed(1)}m`, '#ffaa66', new THREE.Vector3(0, -0.1, -0.8));
+        
+        // 装饰小球
+        const pointMat = new THREE.MeshStandardMaterial({ color: 0xffaa66 });
+        const startSphere = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), pointMat);
+        startSphere.position.set(0, -0.05, 0);
+        scene.add(startSphere);
+        const endSphere = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), pointMat);
+        endSphere.position.set(0, totalHeight + 0.05, totalLength);
+        scene.add(endSphere);
+        
+        // === 4. 动画系统 ===
+        let activeAnimations = [];
+        
+        function moveRed(step) {
+            const isAtTop = step.redAtTop;
+            const newY = isAtTop ? step.originalRedY : step.redTargetY;
+            const currentY = step.red.position.y;
+            if (Math.abs(currentY - newY) < 0.001) return;
+            
+            step.redAtTop = !isAtTop;
+            activeAnimations.push({
+                target: step.red,
+                startY: currentY,
+                endY: newY,
+                startTime: performance.now() / 1000,
+                duration: 0.45
+            });
+        }
+        
+        function moveBlue(step) {
+            const isAtTarget = step.blueAtTarget;
+            const newZ = isAtTarget ? step.originalBlueZ : step.blueTargetZ;
+            const currentZ = step.blue.position.z;
+            if (Math.abs(currentZ - newZ) < 0.001) return;
+            
+            step.blueAtTarget = !isAtTarget;
+            activeAnimations.push({
+                target: step.blue,
+                startZ: currentZ,
+                endZ: newZ,
+                startTime: performance.now() / 1000,
+                duration: 0.45
+            });
+        }
+        
+        function updateAnimations(nowSec) {
+            const toRemove = [];
+            for (let idx = 0; idx < activeAnimations.length; idx++) {
+                const anim = activeAnimations[idx];
+                const elapsed = nowSec - anim.startTime;
+                let t = elapsed / anim.duration;
+                if (t >= 1.0) {
+                    t = 1.0;
+                    if (anim.endY !== undefined) anim.target.position.y = anim.endY;
+                    if (anim.endZ !== undefined) anim.target.position.z = anim.endZ;
+                    toRemove.push(idx);
+                } else {
+                    const easeOut = 1 - Math.pow(1 - t, 3);
+                    if (anim.endY !== undefined) {
+                        anim.target.position.y = anim.startY + (anim.endY - anim.startY) * easeOut;
+                    }
+                    if (anim.endZ !== undefined) {
+                        anim.target.position.z = anim.startZ + (anim.endZ - anim.startZ) * easeOut;
+                    }
+                }
+            }
+            for (let i = toRemove.length - 1; i >= 0; i--) {
+                activeAnimations.splice(toRemove[i], 1);
+            }
+        }
+        
+        // === 一键复位功能 ===
+        function resetAll() {
+            // 停止所有正在进行的动画
+            activeAnimations = [];
+            // 遍历所有台阶，直接设置位置并重置状态
+            for (const step of stepsData) {
+                // 红色板复位
+                step.red.position.y = step.originalRedY;
+                step.redAtTop = false;
+                // 蓝色板复位
+                step.blue.position.z = step.originalBlueZ;
+                step.blueAtTarget = false;
+            }
+        }
+        
+        // === 5. 射线交互（支持鼠标和触摸） ===
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        
+        function handlePointer(clientX, clientY) {
+            pointer.x = (clientX / renderer.domElement.clientWidth) * 2 - 1;
+            pointer.y = -(clientY / renderer.domElement.clientHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(pointer, camera);
+            
+            const redPlates = stepsData.map(s => s.red);
+            const bluePlates = stepsData.map(s => s.blue);
+            const allTargets = [...redPlates, ...bluePlates];
+            
+            const intersects = raycaster.intersectObjects(allTargets);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const redStep = stepsData.find(s => s.red === hit);
+                if (redStep) {
+                    moveRed(redStep);
+                    return;
+                }
+                const blueStep = stepsData.find(s => s.blue === hit);
+                if (blueStep) {
+                    moveBlue(blueStep);
+                    return;
+                }
+            }
+        }
+        
+        function onMouseClick(event) {
+            handlePointer(event.clientX, event.clientY);
+        }
+        
+        function onTouchStart(event) {
+            event.preventDefault();
+            if (event.touches.length === 1) {
+                const touch = event.touches[0];
+                handlePointer(touch.clientX, touch.clientY);
+            }
+        }
+        
+        window.addEventListener('click', onMouseClick, false);
+        window.addEventListener('touchstart', onTouchStart, { passive: false });
+        
+        // 绑定复位按钮
+        const resetBtn = document.getElementById('reset-btn');
+        resetBtn.addEventListener('click', resetAll);
+        resetBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            resetAll();
+        }, { passive: false });
+        
+        // === 6. 渲染循环 ===
+        function animate() {
+            const now = performance.now() / 1000;
+            updateAnimations(now);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        console.log('3D楼梯 | 红色面升顶 | 蓝色面移向第一阶对齐 | 支持触摸点击 | 一键复位已添加');
+    </script>
+</body>
+</html>
