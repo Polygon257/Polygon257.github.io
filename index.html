@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>我们的网页 | 渐变工坊 · 创意矩阵</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0f1e 0%, #0e1a2a 35%, #1a1f35 70%, #2c1e3a 100%);
+            background-attachment: fixed;
+            position: relative;
+            overflow-x: hidden;
+            color: #fff;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 15% 30%, rgba(255,255,255,0.02) 2px, transparent 2px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.35;
+            z-index: 0;
+            pointer-events: none;
+            animation: floatGlow 18s infinite alternate ease-in-out;
+        }
+        .orb-1 { width: 50vw; height: 50vw; background: radial-gradient(circle, #ff7b9c, #a05eff); top: -20vh; left: -20vw; animation-duration: 22s; }
+        .orb-2 { width: 60vh; height: 60vh; background: radial-gradient(circle, #3cc6ff, #6a3dff); bottom: -15vh; right: -10vw; animation-duration: 25s; animation-delay: -2s; }
+        .orb-3 { width: 40vw; height: 40vw; background: radial-gradient(circle, #f9d976, #f39f86); top: 40vh; right: 20vw; opacity: 0.25; animation-duration: 28s; animation-delay: -5s; }
+        @keyframes floatGlow {
+            0% { transform: translate(0,0) scale(1); opacity: 0.3; }
+            100% { transform: translate(5%,8%) scale(1.2); opacity: 0.45; }
+        }
+
+        /* 右上角登录区域 */
+        .auth-area {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            z-index: 100;
+            background: rgba(20, 30, 55, 0.7);
+            backdrop-filter: blur(12px);
+            padding: 8px 18px;
+            border-radius: 60px;
+            border: 1px solid rgba(255,215,150,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .auth-area span {
+            color: #ffefcf;
+        }
+        .auth-btn {
+            background: none;
+            border: none;
+            color: #ffcf8a;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        .auth-btn:hover {
+            color: white;
+            text-shadow: 0 0 4px #ffb347;
+        }
+        .logout-btn {
+            background: rgba(255,100,80,0.3);
+            padding: 4px 12px;
+            border-radius: 40px;
+        }
+        .logout-btn:hover {
+            background: rgba(255,100,80,0.6);
+        }
+
+        .hero {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 1400px;
+            padding: 2rem;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(12, 20, 35, 0.45);
+            backdrop-filter: blur(16px);
+            border-radius: 3rem;
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08) inset;
+            transition: transform 0.3s ease, box-shadow 0.4s ease;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .glass-card:hover { transform: translateY(-5px); box-shadow: 0 35px 55px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.2) inset; }
+
+        .gradient-title {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #FFDDA1, #FF9A9E, #FAD0C4, #C9E9FF, #A1C4FD);
+            background-size: 300% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shimmer 8s linear infinite alternate;
+        }
+        @keyframes shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+        .title-en {
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            font-weight: 300;
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(120deg, rgba(255,255,240,0.8), rgba(200,220,255,0.9));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .subtitle {
+            font-size: clamp(1.1rem, 4vw, 1.8rem);
+            font-weight: 400;
+            margin: 0.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .by-name {
+            font-weight: 700;
+            background: linear-gradient(145deg, #FFE6B0, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .polygon-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background: linear-gradient(145deg, #FFD966, #FFA559);
+        }
+        .polygon-badge {
+            display: inline-flex;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
+            padding: 0.2rem 0.8rem;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            gap: 0.4rem;
+            color: #FFE9C7;
+            border: 1px solid rgba(255,215,150,0.5);
+        }
+        .divider {
+            width: 120px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,200,150,0.8), rgba(160,120,255,0.8), transparent);
+            margin: 1.8rem auto;
+            border-radius: 4px;
+        }
+        .description {
+            font-size: 1.05rem;
+            line-height: 1.65;
+            color: rgba(255,255,245,0.9);
+            max-width: 620px;
+            margin: 1.2rem auto 1.8rem;
+        }
+
+        /* 出版社注释 */
+        .reference-note {
+            max-width: 760px;
+            margin: 0.5rem auto 1.5rem;
+            background: rgba(25, 35, 55, 0.5);
+            backdrop-filter: blur(4px);
+            border-radius: 1.2rem;
+            padding: 0.8rem 1rem;
+            font-size: 0.8rem;
+            color: #e9e2c7;
+            border-left: 3px solid #ffb347;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .reference-note strong {
+            color: #FFD966;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1.2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.8rem 2rem;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(20,30,55,0.4);
+            backdrop-filter: blur(6px);
+            color: white;
+        }
+        .btn-primary {
+            background: linear-gradient(120deg, rgba(255,140,110,0.8), rgba(200,100,210,0.8));
+            border: none;
+            box-shadow: 0 8px 18px -6px rgba(0,0,0,0.3);
+        }
+        .btn-primary:hover { transform: scale(1.02); background: linear-gradient(120deg, rgba(255,120,90,0.95), rgba(180,80,200,0.95)); }
+        .btn-outline:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,220,150,0.8); transform: translateY(-2px); }
+
+        /* 几何精练卡片区 */
+        .challenge-header { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin: 2rem 0 1.2rem; }
+        .challenge-header h3 { font-size: 1.5rem; font-weight: 600; background: linear-gradient(145deg,#F9F3C1,#FFCFA0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .challenge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .skill-card {
+            background: rgba(25,35,55,0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 1.8rem;
+            padding: 1rem;
+            cursor: pointer;
+            border: 1px solid rgba(255,220,160,0.25);
+            transition: 0.25s;
+            text-align: left;
+        }
+        .skill-card:hover { transform: translateY(-6px); background: rgba(35,48,75,0.75); border-color: rgba(255,200,120,0.6); }
+        .skill-title { font-size: 1.2rem; font-weight: 700; display: flex; justify-content: space-between; }
+        .skill-title .main-text { background: linear-gradient(115deg,#FFF3BF,#FFD27A); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .skill-desc { font-size: 0.85rem; color: rgba(245,235,210,0.8); border-left: 2px solid rgba(255,190,100,0.7); padding-left: 0.7rem; margin-top: 0.5rem; }
+        .click-hint { font-size: 0.7rem; margin-top: 0.6rem; color: rgba(255,210,140,0.6); text-align: right; }
+
+        /* 投稿专区 */
+        .approved-section {
+            margin: 2rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid rgba(255,200,150,0.3);
+        }
+        .approved-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+        }
+        .approved-header h3 {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #FFE0B5, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .approved-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 1rem;
+        }
+        .approved-card {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            padding: 0.8rem 1rem;
+            transition: 0.2s;
+            border: 1px solid rgba(255,180,100,0.5);
+            cursor: pointer;
+            text-align: center;
+        }
+        .approved-card:hover {
+            transform: translateY(-4px);
+            background: rgba(50,70,100,0.6);
+            border-color: #ffb347;
+        }
+        .approved-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #ffefcf;
+        }
+        .approved-user {
+            font-size: 0.7rem;
+            color: #ffcd94;
+            margin-top: 4px;
+        }
+        .empty-approved {
+            text-align: center;
+            padding: 1rem;
+            color: rgba(255,220,150,0.6);
+        }
+
+        /* 特别挑战专区 */
+        .special-section {
+            margin: 2rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px dashed rgba(255,200,120,0.4);
+        }
+        .special-label {
+            display: inline-block;
+            background: rgba(255,140,100,0.2);
+            backdrop-filter: blur(8px);
+            padding: 0.2rem 1rem;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .special-cards-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 1.8rem;
+            flex-wrap: wrap;
+        }
+        .single-special-card {
+            width: 280px;
+            background: linear-gradient(125deg, rgba(45,55,85,0.8), rgba(30,35,65,0.9));
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 1rem 1.2rem;
+            cursor: pointer;
+            border: 1px solid rgba(255,190,80,0.6);
+            transition: all 0.3s ease;
+            text-align: center;
+            margin: 0;
+        }
+        .single-special-card:hover {
+            transform: scale(1.02) translateY(-5px);
+            border-color: #ffb347;
+        }
+        .special-game-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg,#FFF2B5,#FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            align-items: baseline;
+        }
+        .special-desc {
+            font-size: 0.85rem;
+            color: #ffe2b5;
+            margin-top: 0.4rem;
+        }
+
+        .footer-note {
+            margin-top: 2.5rem;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            border-top: 1px dashed rgba(255,255,255,0.15);
+            padding-top: 1.8rem;
+        }
+        .admin-link { cursor: pointer; color: rgba(255,210,150,0.8); transition: 0.2s; }
+        .admin-link:hover { color: #ffcf8a; text-decoration: underline; }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: rgba(18,28,45,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.8rem;
+            border: 1px solid rgba(255,215,150,0.5);
+            color: #f0f0f0;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .close-modal {
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #ffcf8a;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem; }
+        .form-group input {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 1.2rem;
+            background: #0f1422cc;
+            border: 1px solid #ffcf8a77;
+            color: white;
+        }
+        .editor-textarea {
+            width: 100%;
+            height: 300px;
+            background: #0c1122cc;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #f0f0f0;
+            resize: vertical;
+            border: 1px solid #ffcf8a66;
+        }
+        .preview-frame { width: 100%; height: 280px; background: white; border-radius: 1rem; border: none; }
+        .editor-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin: 12px 0;
+        }
+        .small-btn {
+            background: rgba(255,200,100,0.2);
+            border: 1px solid #ffcf8a;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #ffe2b5;
+            font-family: inherit;
+        }
+        .small-btn:hover { background: #ffcf8a33; }
+
+        .submission-list { margin-top: 1rem; }
+        .submission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1f2a3e66;
+            padding: 0.6rem 1rem;
+            border-radius: 1.2rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .submission-info { flex: 2; min-width: 150px; }
+        .submission-actions { display: flex; gap: 0.5rem; }
+        .del-btn, .approve-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px 8px; border-radius: 2rem; transition: 0.2s; }
+        .approve-btn { background: #2e7d6477; color: #c0ffd0; }
+        .approve-btn:hover { background: #3e9e80; }
+        .del-btn { background: #a0403077; color: #ffbc9a; }
+        .del-btn:hover { background: #c25a44; }
+
+        @media (max-width: 680px) {
+            .glass-card { padding: 2rem 1.2rem; }
+            .single-special-card { width: 240px; }
+            .special-cards-wrapper { gap: 1rem; }
+            .auth-area { top: 10px; right: 15px; padding: 4px 12px; font-size: 0.75rem; }
+        }
+        .floating-poly { position: fixed; z-index: 1; width: 80px; height: 80px; background: rgba(255,210,120,0.08); backdrop-filter: blur(12px); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); pointer-events: none; animation: rotateSlow 30s linear infinite; }
+        .poly1 { bottom: 8%; left: 3%; width: 110px; height: 110px; opacity: 0.3; animation-duration: 40s; }
+        .poly2 { top: 12%; right: 5%; width: 60px; height: 60px; opacity: 0.25; animation-direction: reverse; }
+        @keyframes rotateSlow { 0% { transform: rotate(0deg) translateY(0px); } 100% { transform: rotate(360deg) translateY(18px); } }
+    </style>
+</head>
+<body>
+    <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+    <div class="floating-poly poly1"></div><div class="floating-poly poly2"></div>
+
+    <!-- 右上角登录/注册区域 -->
+    <div class="auth-area" id="authArea">
+        <span id="authDisplay">未登录</span>
+        <button id="authButton" class="auth-btn">登录/注册</button>
+    </div>
+
+    <main class="hero">
+        <div class="glass-card">
+            <h1 class="gradient-title">我们的网页</h1>
+            <div class="title-en">✦ OUR DIGITAL REALM ✦</div>
+            <div class="subtitle"><span>🌊</span><span class="by-name"><span class="polygon-icon"></span>by Polygon257</span><span>✨</span></div>
+            <div class="polygon-badge" style="width: fit-content; margin: 0 auto;"><span class="polygon-icon"></span><span>POLYGON 核心</span></div>
+            <div class="divider"></div>
+            <div class="description">
+                在这里，渐变的光影与多边形的棱角交织成未来的序章。<br>
+                每一次像素跃动都源自创造者的炙热脉搏，邀你坠入这场无垠的视觉星海。
+            </div>
+
+            <div class="reference-note">
+                📘 <strong>教材及教辅说明</strong>：本页面所提及的“课本”均指人民教育出版社出版的《义务教育教科书 数学》；<br>
+                📖 “小自主”指广西教育出版社、接力出版社、广西师范大学出版社联合出版的《自主学习能力测评》配套人教版。特此标注，以明来源。
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" id="htmlEditorBtn">✦ HTML 编辑器 ✦</button>
+                <button class="btn btn-outline" id="webSubmitBtn">📬 网页投稿器</button>
+            </div>
+
+            <!-- 几何精练区 -->
+            <div class="challenge-header"><span>📐</span><h3>几何精练 · 核心闯关</h3><span>🧩</span></div>
+            <div class="challenge-grid">
+                <div class="skill-card" data-url="https://polygon257.github.io/楼梯.html"><div class="skill-title"><span class="main-text">📚 六下小自主P102T7</span><span>🔺</span></div><div class="skill-desc">“那个楼梯你会求了吗！”</div><div class="click-hint">🔗 点击跳转</div></div>
+                <div class="skill-card" data-url="https://polygon257.github.io/涂色立方体1.html"><div class="skill-title"><span class="main-text">🎨 六下小自主P104T11</span><span>🧊</span></div><div class="skill-desc">“你要看这个有多少个面涂色！”</div><div class="click-hint">🔗 点击跳转</div></div>
+                <div class="skill-card" data-url="https://polygon257.github.io/涂色立方体2.html"><div class="skill-title"><span class="main-text">📖 六下课本P90T14</span><span>⚠️</span></div><div class="skill-desc">“叫你看叫你看你就是不看！”</div><div class="click-hint">🔗 点击跳转</div></div>
+                <div class="skill-card" data-url="https://polygon257.github.io/正交相机.html"><div class="skill-title"><span class="main-text">✏️ 六下课本P87T2</span><span>📐</span></div><div class="skill-desc">“那个图形会画了吗？”</div><div class="click-hint">🔗 点击跳转</div></div>
+                <div class="skill-card" data-url="https://polygon257.github.io/放置.html"><div class="skill-title"><span class="main-text">🧊 3D几何放置</span><span>🔷</span></div><div class="skill-desc">“你要懂那个单位！”</div><div class="click-hint">🔗 点击跳转</div></div>
+            </div>
+
+            <!-- 投稿专区 -->
+            <div class="approved-section" id="approvedSection">
+                <div class="approved-header"><span>🌟</span><h3>✨ 投稿专区 · 精选推荐 ✨</h3><span>🌟</span></div>
+                <div id="approvedContainer" class="approved-grid"></div>
+            </div>
+
+            <!-- 特别挑战专区 -->
+            <div class="special-section">
+                <div class="special-label">⚡ 特别挑战 · 独立专区 ⚡</div>
+                <div class="special-cards-wrapper">
+                    <div class="single-special-card" id="game2048Btn">
+                        <div class="special-game-title"><span>🎮</span><span>2048Game</span><span>🧩</span></div>
+                        <div class="special-desc">📢 外加煞笔Ai</div>
+                        <div class="click-hint" style="text-align:center; margin-top:8px;">🔥 点击立即挑战 · 数字合成</div>
+                    </div>
+                    <div class="single-special-card" id="cryptoBtn">
+                        <div class="special-game-title"><span>🔐</span><span>加密解密</span><span>🔑</span></div>
+                        <div class="special-desc">再也不怕别人偷看了</div>
+                        <div class="click-hint" style="text-align:center; margin-top:8px;">🔒 点击前往安全工具</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-note">
+                <span>© 2026 我们的网页</span><span>✦</span><span>多边形思维 · 梯度进阶</span><span>✦</span>
+                <span class="admin-link" id="adminPanelBtn">📋 投稿管理 (仅我可见)</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- HTML编辑器模态框 -->
+    <div id="htmlEditorModal" class="modal"><div class="modal-content"><div class="modal-header"><span>✨ 即见即得 · HTML 编辑器</span><button class="close-modal" data-modal="htmlEditorModal">✕</button></div>
+        <textarea id="codeEditor" class="editor-textarea" placeholder="写一段HTML/CSS/JS代码..." spellcheck="false"></textarea>
+        <div class="editor-buttons">
+            <button id="runPreviewBtn" class="small-btn">▶ 运行预览</button>
+            <button id="saveHtmlBtn" class="small-btn">💾 保存为 .html 文件</button>
+        </div>
+        <div class="preview-area"><iframe id="previewFrame" class="preview-frame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe></div>
+    </div></div>
+
+    <!-- 投稿模态框 (已移除username输入框) -->
+    <div id="submitModal" class="modal"><div class="modal-content"><div class="modal-header"><span>📮 网页投稿器 · 分享你发现的宝藏网页</span><button class="close-modal" data-modal="submitModal">✕</button></div>
+        <div class="form-group"><label>网站名称</label><input type="text" id="siteName" placeholder="例: 奇妙几何馆"></div>
+        <div class="form-group"><label>网页链接 (URL)</label><input type="url" id="siteUrl" placeholder="https://..."></div>
+        <div class="editor-buttons"><button id="submitWebBtn" class="small-btn">💾 提交投稿</button></div>
+        <div id="submitMsg" style="margin-top: 12px; font-size:0.85rem;"></div>
+    </div></div>
+
+    <!-- 登录/注册模态框 -->
+    <div id="authModal" class="modal"><div class="modal-content"><div class="modal-header"><span>🔐 登录 / 注册</span><button class="close-modal" data-modal="authModal">✕</button></div>
+        <div class="form-group"><label>用户名</label><input type="text" id="loginUsername" placeholder="请输入用户名"></div>
+        <div class="form-group"><label>密码</label><input type="password" id="loginPassword" placeholder="请输入密码"></div>
+        <div class="editor-buttons" style="justify-content: space-between;">
+            <button id="doLoginBtn" class="small-btn">登录</button>
+            <button id="doRegisterBtn" class="small-btn">注册新账号</button>
+        </div>
+        <div id="authMsg" style="margin-top: 12px; font-size:0.85rem; text-align:center;"></div>
+    </div></div>
+
+    <!-- 管理员面板 (无需密码，仅检测用户名是否为 Polygon257) -->
+    <div id="adminModal" class="modal"><div class="modal-content"><div class="modal-header"><span>🔒 投稿管理 · 管理员面板</span><button class="close-modal" data-modal="adminModal">✕</button></div>
+        <div id="adminStatusArea"></div>
+        <div id="adminContentArea" style="display:none;">
+            <h4>📋 用户投稿列表 (可审核通过)</h4>
+            <div id="submissionsList" class="submission-list"></div>
+            <div class="editor-buttons" style="margin-top: 1rem;"><button id="clearStorageBtn" class="small-btn" style="background:#aa2e2e80;">清空所有投稿</button></div>
+        </div>
+    </div></div>
+
+    <script>
+        (function() {
+            // ---------- 用户系统 (简单前端模拟) ----------
+            const USERS_KEY = 'polygon_users';
+            const CURRENT_USER_KEY = 'polygon_current_user';
+
+            function getUsers() {
+                const raw = localStorage.getItem(USERS_KEY);
+                return raw ? JSON.parse(raw) : [];
+            }
+            function saveUsers(users) {
+                localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            }
+            // 检查用户名是否已存在（不区分大小写）
+            function isUsernameExists(username) {
+                const users = getUsers();
+                return users.some(u => u.username.toLowerCase() === username.toLowerCase());
+            }
+            function register(username, password) {
+                if (isUsernameExists(username)) {
+                    return { success: false, msg: '用户名已存在（不区分大小写）' };
+                }
+                const users = getUsers();
+                users.push({ username, password });
+                saveUsers(users);
+                return { success: true };
+            }
+            function login(username, password) {
+                const users = getUsers();
+                const user = users.find(u => u.username === username && u.password === password);
+                if (user) {
+                    localStorage.setItem(CURRENT_USER_KEY, username);
+                    return { success: true };
+                }
+                return { success: false, msg: '用户名或密码错误' };
+            }
+            function getCurrentUser() {
+                return localStorage.getItem(CURRENT_USER_KEY);
+            }
+            function logout() {
+                localStorage.removeItem(CURRENT_USER_KEY);
+            }
+
+            // 更新右上角UI
+            function updateAuthUI() {
+                const currentUser = getCurrentUser();
+                const authDisplay = document.getElementById('authDisplay');
+                const authBtn = document.getElementById('authButton');
+                if (currentUser) {
+                    authDisplay.innerText = `👤 ${currentUser}`;
+                    authBtn.innerText = '退出';
+                    authBtn.classList.add('logout-btn');
+                } else {
+                    authDisplay.innerText = '未登录';
+                    authBtn.innerText = '登录/注册';
+                    authBtn.classList.remove('logout-btn');
+                }
+            }
+
+            // 登录/注册模态框逻辑
+            const authModal = document.getElementById('authModal');
+            const loginUsername = document.getElementById('loginUsername');
+            const loginPassword = document.getElementById('loginPassword');
+            const doLoginBtn = document.getElementById('doLoginBtn');
+            const doRegisterBtn = document.getElementById('doRegisterBtn');
+            const authMsg = document.getElementById('authMsg');
+
+            function openAuthModal() { authModal.style.display = 'flex'; }
+            function closeAuthModal() { authModal.style.display = 'none'; authMsg.innerText = ''; loginUsername.value = ''; loginPassword.value = ''; }
+
+            doLoginBtn.addEventListener('click', () => {
+                const username = loginUsername.value.trim();
+                const pwd = loginPassword.value.trim();
+                if (!username || !pwd) { authMsg.innerText = '请填写用户名和密码'; return; }
+                const res = login(username, pwd);
+                if (res.success) {
+                    authMsg.innerText = '登录成功！';
+                    updateAuthUI();
+                    setTimeout(closeAuthModal, 1000);
+                } else {
+                    authMsg.innerText = res.msg;
+                }
+            });
+            doRegisterBtn.addEventListener('click', () => {
+                const username = loginUsername.value.trim();
+                const pwd = loginPassword.value.trim();
+                if (!username || !pwd) { authMsg.innerText = '请填写用户名和密码'; return; }
+                const res = register(username, pwd);
+                if (res.success) {
+                    authMsg.innerText = '注册成功，请登录';
+                } else {
+                    authMsg.innerText = res.msg;
+                }
+            });
+
+            // 右上角按钮点击
+            const authButton = document.getElementById('authButton');
+            authButton.addEventListener('click', () => {
+                const current = getCurrentUser();
+                if (current) {
+                    logout();
+                    updateAuthUI();
+                    alert('已退出登录');
+                } else {
+                    openAuthModal();
+                }
+            });
+
+            // ---------- 投稿存储 ----------
+            const SUBMISSION_KEY = 'polygon_web_submissions_v2';
+            const APPROVED_KEY = 'polygon_approved_ids';   
+
+            function getSubmissions() { const raw = localStorage.getItem(SUBMISSION_KEY); return raw ? JSON.parse(raw) : []; }
+            function saveSubmissions(list) { localStorage.setItem(SUBMISSION_KEY, JSON.stringify(list)); }
+            function getApprovedIds() { const raw = localStorage.getItem(APPROVED_KEY); return raw ? JSON.parse(raw) : []; }
+            function saveApprovedIds(ids) { localStorage.setItem(APPROVED_KEY, JSON.stringify(ids)); }
+
+            function addSubmission(username, name, url) {
+                let list = getSubmissions();
+                const newId = Date.now();
+                list.push({ id: newId, username: username, name: name.trim(), url: url.trim(), date: new Date().toLocaleString() });
+                saveSubmissions(list);
+                return newId;
+            }
+            function deleteSubmission(id) {
+                let list = getSubmissions();
+                list = list.filter(item => item.id != id);
+                saveSubmissions(list);
+                let approved = getApprovedIds();
+                if(approved.includes(id)) { approved = approved.filter(i => i !== id); saveApprovedIds(approved); }
+                renderAdminList();
+                renderApprovedSection();
+            }
+            function approveSubmission(id) {
+                let approved = getApprovedIds();
+                if(!approved.includes(id)) { approved.push(id); saveApprovedIds(approved); renderApprovedSection(); renderAdminList(); }
+            }
+            function revokeApproval(id) {
+                let approved = getApprovedIds();
+                if(approved.includes(id)) { approved = approved.filter(i => i !== id); saveApprovedIds(approved); renderApprovedSection(); renderAdminList(); }
+            }
+
+            function renderApprovedSection() {
+                const container = document.getElementById('approvedContainer');
+                if(!container) return;
+                const submissions = getSubmissions();
+                const approvedIds = getApprovedIds();
+                const approvedItems = submissions.filter(sub => approvedIds.includes(sub.id));
+                if(approvedItems.length === 0) {
+                    container.innerHTML = '<div class="empty-approved">✨ 暂无审核通过的网页，请在管理面板中“审核通过” ✨</div>';
+                    return;
+                }
+                container.innerHTML = approvedItems.map(item => `
+                    <div class="approved-card" data-url="${escapeHtml(item.url)}">
+                        <div class="approved-name">📌 ${escapeHtml(item.name)}</div>
+                        <div class="approved-user">👤 推荐人: ${escapeHtml(item.username)}</div>
+                    </div>
+                `).join('');
+                document.querySelectorAll('.approved-card').forEach(card => {
+                    card.addEventListener('click', (e) => { e.stopPropagation(); const url = card.getAttribute('data-url'); if(url) window.open(url, '_blank'); });
+                });
+            }
+
+            function renderAdminList() {
+                const container = document.getElementById('submissionsList');
+                if(!container) return;
+                const subs = getSubmissions();
+                const approvedIds = getApprovedIds();
+                if(subs.length === 0) { container.innerHTML = '<div style="padding:1rem; text-align:center;">✨ 暂无投稿，快让朋友提交吧 ✨</div>'; return; }
+                container.innerHTML = subs.map(sub => {
+                    const isApproved = approvedIds.includes(sub.id);
+                    return `
+                        <div class="submission-item" data-id="${sub.id}">
+                            <div class="submission-info">
+                                <strong>${escapeHtml(sub.name)}</strong><br>
+                                <span style="font-size:0.8rem;">👤 ${escapeHtml(sub.username)}</span><br>
+                                <a href="${escapeHtml(sub.url)}" target="_blank" style="font-size:0.75rem;color:#ffcf8a;">${escapeHtml(sub.url)}</a>
+                                <div style="font-size:0.7rem; opacity:0.6;">${sub.date}</div>
+                            </div>
+                            <div class="submission-actions">
+                                ${!isApproved ? `<button class="approve-btn" data-id="${sub.id}">✅ 审核通过</button>` : `<button class="approve-btn" data-id="${sub.id}" style="background:#4c8b73;">✔ 已通过</button>`}
+                                <button class="del-btn" data-id="${sub.id}">🗑️ 删除</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                document.querySelectorAll('.approve-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = parseInt(btn.getAttribute('data-id'));
+                        const currentApproved = getApprovedIds();
+                        if(!currentApproved.includes(id)) approveSubmission(id);
+                        else if(confirm('该网页已在专区中，是否从专区移除？')) revokeApproval(id);
+                    });
+                });
+                document.querySelectorAll('.del-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = parseInt(btn.getAttribute('data-id'));
+                        if(confirm('删除该投稿 (也会从专区移除)？')) deleteSubmission(id);
+                    });
+                });
+            }
+
+            function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+            // ---------- 模态框通用 ----------
+            const modals = {
+                htmlEditor: document.getElementById('htmlEditorModal'),
+                submit: document.getElementById('submitModal'),
+                admin: document.getElementById('adminModal'),
+                auth: authModal
+            };
+            function openModal(modalId) { if(modals[modalId]) modals[modalId].style.display = 'flex'; }
+            function closeModal(modalId) { if(modals[modalId]) modals[modalId].style.display = 'none'; }
+            document.querySelectorAll('.close-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => { const modalDiv = btn.closest('.modal'); if(modalDiv) modalDiv.style.display = 'none'; });
+            });
+            window.addEventListener('click', (e) => { if(e.target.classList && e.target.classList.contains('modal')) e.target.style.display = 'none'; });
+
+            // ---------- 管理员面板：仅当登录用户名为 Polygon257 时显示列表 ----------
+            const adminPanelBtn = document.getElementById('adminPanelBtn');
+            const adminStatusArea = document.getElementById('adminStatusArea');
+            const adminContentArea = document.getElementById('adminContentArea');
+            const clearStorageBtn = document.getElementById('clearStorageBtn');
+            
+            function showAdminPanel() {
+                const currentUser = getCurrentUser();
+                if (currentUser === 'Polygon257') {
+                    adminStatusArea.innerHTML = '<div style="margin-bottom:1rem; color:#a5ffa5;">✅ 管理员身份验证通过 (Polygon257)</div>';
+                    adminContentArea.style.display = 'block';
+                    renderAdminList();
+                } else {
+                    adminStatusArea.innerHTML = `<div style="margin-bottom:1rem; color:#ffa07a;">⛔ 权限不足：只有管理员 Polygon257 可以查看投稿管理。<br>当前登录用户：${currentUser || '未登录'}</div>`;
+                    adminContentArea.style.display = 'none';
+                }
+            }
+
+            if(adminPanelBtn) {
+                adminPanelBtn.addEventListener('click', () => {
+                    openModal('admin');
+                    showAdminPanel();
+                });
+                if(clearStorageBtn) {
+                    clearStorageBtn.addEventListener('click', () => {
+                        if(confirm('⚠️ 永久删除所有投稿和审核数据，不可恢复。确定吗？')) {
+                            localStorage.removeItem(SUBMISSION_KEY);
+                            localStorage.removeItem(APPROVED_KEY);
+                            if (getCurrentUser() === 'Polygon257') {
+                                renderAdminList();
+                            }
+                            renderApprovedSection();
+                        }
+                    });
+                }
+            }
+
+            // HTML编辑器
+            const htmlBtn = document.getElementById('htmlEditorBtn');
+            const codeArea = document.getElementById('codeEditor');
+            const previewFrame = document.getElementById('previewFrame');
+            const runBtn = document.getElementById('runPreviewBtn');
+            const saveBtn = document.getElementById('saveHtmlBtn');
+            function updatePreview() {
+                const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+                doc.open();
+                doc.write(codeArea.value);
+                doc.close();
+            }
+            function saveAsHtml() {
+                const content = codeArea.value;
+                const blob = new Blob([content], { type: 'text/html' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.download = 'my_webpage.html';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            if(htmlBtn) {
+                htmlBtn.addEventListener('click', () => {
+                    openModal('htmlEditor');
+                    if(!codeArea.value) codeArea.value = `<!DOCTYPE html>\n<html><head><title>渐变创意</title><style>body{background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}</style></head><body><h1>✨ 你的创意空间 ✨</h1></body></html>`;
+                    updatePreview();
+                });
+                if(runBtn) runBtn.addEventListener('click', updatePreview);
+                if(saveBtn) saveBtn.addEventListener('click', saveAsHtml);
+            }
+
+            // 网页投稿器 (需要登录)
+            const submitModalBtn = document.getElementById('webSubmitBtn');
+            const submitWebBtn = document.getElementById('submitWebBtn');
+            const siteNameInput = document.getElementById('siteName');
+            const siteUrlInput = document.getElementById('siteUrl');
+            const submitMsgDiv = document.getElementById('submitMsg');
+            if(submitModalBtn) {
+                submitModalBtn.addEventListener('click', () => {
+                    const currentUser = getCurrentUser();
+                    if (!currentUser) {
+                        alert('请先登录后再投稿');
+                        openAuthModal();
+                        return;
+                    }
+                    openModal('submit');
+                });
+                submitWebBtn.addEventListener('click', () => {
+                    const currentUser = getCurrentUser();
+                    if (!currentUser) {
+                        alert('登录状态已失效，请重新登录');
+                        closeModal('submit');
+                        openAuthModal();
+                        return;
+                    }
+                    const name = siteNameInput.value.trim();
+                    let url = siteUrlInput.value.trim();
+                    if(!name || !url) { submitMsgDiv.innerText = '请完整填写网站名称和链接'; return; }
+                    if(!url.startsWith('http')) url = 'https://' + url;
+                    try { new URL(url); } catch(e) { submitMsgDiv.innerText = '链接格式无效，需包含http://或https://'; return; }
+                    addSubmission(currentUser, name, url);
+                    submitMsgDiv.innerText = '✅ 投稿成功！管理员审核后将在专区展示。';
+                    siteNameInput.value = ''; siteUrlInput.value = '';
+                    setTimeout(()=>submitMsgDiv.innerText='', 2500);
+                });
+            }
+
+            // 几何卡片跳转
+            document.querySelectorAll('.skill-card').forEach(card => { const url = card.getAttribute('data-url'); if(url) card.addEventListener('click', () => window.open(url, '_blank')); });
+            // 2048 和 加密解密
+            const game2048 = document.getElementById('game2048Btn');
+            if(game2048) game2048.addEventListener('click', () => window.open('https://polygon257.github.io/2048.html', '_blank'));
+            const cryptoBtn = document.getElementById('cryptoBtn');
+            if(cryptoBtn) cryptoBtn.addEventListener('click', () => window.open('https://polygon257.github.io/加密.html', '_blank'));
+
+            // 初始化UI
+            updateAuthUI();
+            renderApprovedSection();
+            console.log('系统启动 | 管理员权限基于用户名 Polygon257');
+        })();
+    </script>
+</body>
+</html>
