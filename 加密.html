@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>五层加解密 · 动态二进制（≤8位补8位）· 实时模式</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0f4f9 0%, #e3eaf1 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 1.5rem;
+        }
+
+        .card {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 2rem;
+            box-shadow: 0 25px 40px -14px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .header {
+            background: #0b2b2f;
+            padding: 1.6rem 2rem;
+            color: white;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .header h1 span {
+            background: #1d4e54;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            font-family: monospace;
+        }
+        .sub {
+            margin-top: 0.6rem;
+            font-size: 0.9rem;
+            opacity: 0.85;
+            border-left: 3px solid #6fcb9f;
+            padding-left: 0.8rem;
+        }
+        .steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.8rem;
+        }
+        .step-badge {
+            background: rgba(111, 203, 159, 0.2);
+            border: 1px solid rgba(111, 203, 159, 0.5);
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.2rem;
+            justify-content: center;
+        }
+        .crypto-btn {
+            flex: 1;
+            min-width: 130px;
+            background: #f0f4f9;
+            border: none;
+            padding: 0.7rem 1rem;
+            border-radius: 2.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            color: #1e2f3a;
+        }
+        .crypto-btn.encrypt {
+            background: #1b3b3f;
+            color: white;
+            box-shadow: 0 6px 14px rgba(27, 59, 63, 0.3);
+        }
+        .crypto-btn.encrypt:hover {
+            background: #0f2c2f;
+            transform: translateY(-2px);
+        }
+        .crypto-btn.decrypt {
+            background: #2c4b3e;
+            color: white;
+            box-shadow: 0 6px 14px rgba(44, 75, 62, 0.25);
+        }
+        .crypto-btn.decrypt:hover {
+            background: #1e382e;
+            transform: translateY(-2px);
+        }
+        .crypto-btn.active-mode {
+            outline: 3px solid #ffd966;
+            outline-offset: 2px;
+            filter: brightness(1.05);
+        }
+        .mode-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f4f7fc;
+            padding: 0.6rem 1rem;
+            border-radius: 3rem;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        .realtime-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: white;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .realtime-switch label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #1f4e47;
+            cursor: pointer;
+        }
+        .mode-indicator {
+            font-size: 0.85rem;
+            background: #e9edf2;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            color: #0b2b2f;
+            font-weight: 500;
+        }
+        .mode-indicator span {
+            font-weight: 700;
+            color: #1b6b5e;
+        }
+        .aux-buttons {
+            display: flex;
+            gap: 0.7rem;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .mini-btn {
+            background: #e9edf2;
+            border: none;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: #2c3e50;
+            transition: 0.2s;
+        }
+        .mini-btn:hover {
+            background: #dce3ea;
+            transform: translateY(-1px);
+        }
+
+        textarea {
+            width: 100%;
+            border-radius: 1.2rem;
+            border: 1px solid #cbdde9;
+            background: #ffffff;
+            padding: 1rem 1.2rem;
+            font-size: 0.9rem;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+            transition: 0.2s;
+        }
+        textarea:focus {
+            border-color: #3b9f8c;
+            box-shadow: 0 0 0 3px rgba(59, 159, 140, 0.2);
+        }
+        .result-textarea {
+            background: #fafcfd;
+            border-color: #cfe1ea;
+        }
+        .result-textarea:read-only {
+            cursor: default;
+            background: #f9fbfe;
+        }
+
+        .copy-btn-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.8rem;
+        }
+        .copy-btn {
+            background: #1b3b3f;
+            border: none;
+            padding: 0.6rem 1.8rem;
+            border-radius: 2.5rem;
+            color: white;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+        .copy-btn:hover {
+            background: #0f2c2f;
+            transform: scale(0.97);
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #0b2b2f;
+            color: white;
+            padding: 0.5rem 1.4rem;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            z-index: 999;
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+            background: rgba(11, 43, 47, 0.95);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .toast-msg.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .info-note {
+            font-size: 0.7rem;
+            background: #e6f4f1;
+            border-left: 4px solid #3b9f8c;
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            color: #1a5d54;
+        }
+        hr {
+            margin: 1rem 0 0.2rem;
+            border: 0;
+            height: 1px;
+            background: linear-gradient(to right, #d4e2ec, transparent);
+        }
+        @media (max-width: 640px) {
+            .content {
+                padding: 1.5rem;
+            }
+            .crypto-btn {
+                font-size: 0.85rem;
+                padding: 0.5rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>
+            🔐 五层变幻 · 智能二进制舱
+            <span>Unicode+1</span>
+            <span>↔️ 相邻交换</span>
+            <span>≤8位补8位</span>
+        </h1>
+        <div class="sub">
+            ✨ 动态二进制规则：数字二进制长度 ≤ 8 时填充到 8 位，超过 8 位则保留实际长度（无填充）
+        </div>
+        <div class="steps">
+            <div class="step-badge">① 字符串 → Unicode码点列表</div>
+            <div class="step-badge">② 每个数字 +1</div>
+            <div class="step-badge">③ 交换相邻位置 (0↔1, 2↔3...)</div>
+            <div class="step-badge">④ 每个数字 → 变长二进制 (≤8位补0至8位)</div>
+            <div class="step-badge">⑤ 空格连接成密文</div>
+        </div>
+    </div>
+    <div class="content">
+        <!-- 模式与实时控制栏 -->
+        <div class="mode-row">
+            <div class="realtime-switch">
+                <input type="checkbox" id="realtimeCheckbox" checked>
+                <label for="realtimeCheckbox">⚡ 实时模式（输入即更新）</label>
+            </div>
+            <div class="mode-indicator">
+                📌 当前活动模式：<span id="currentModeLabel">加密</span>
+            </div>
+        </div>
+
+        <!-- 加密/解密双按钮（同时用于设定当前模式） -->
+        <div class="action-group">
+            <button class="crypto-btn encrypt" id="encryptBtn">🔒 加密模式</button>
+            <button class="crypto-btn decrypt" id="decryptBtn">🔓 解密模式</button>
+        </div>
+
+        <div class="aux-buttons">
+            <button class="mini-btn" id="clearInputBtn">🗑️ 清空输入</button>
+            <button class="mini-btn" id="examplePlainBtn">📄 填充示例(明文)</button>
+            <button class="mini-btn" id="exampleCipherBtn">🔢 填充示例(密文)</button>
+        </div>
+
+        <div class="input-section">
+            <div class="section-label" style="margin-bottom:0.4rem; font-weight:500; color:#1f4e47;">📥 输入区 (明文/密文)</div>
+            <textarea id="inputText" rows="5" placeholder="在这里输入文本...&#10;• 加密模式：输入任意文本 → 自动生成密文（二进制，≤8位补8位）&#10;• 解密模式：输入二进制密文（空格分隔） → 自动还原原文"></textarea>
+        </div>
+
+        <div class="output-section" style="margin-top: 1.5rem;">
+            <div class="section-label" style="margin-bottom:0.4rem; font-weight:500; color:#1f4e47;">✨ 结果输出区</div>
+            <div class="result-area">
+                <textarea id="resultText" rows="5" class="result-textarea" readonly placeholder="结果将实时显示在此处..."></textarea>
+                <div class="copy-btn-wrapper">
+                    <button class="copy-btn" id="copyResultBtn">📋 复制结果</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-note">
+            💡 二进制转换规则：<br>
+            • 若数字的二进制长度 ≤ 8 位 → 填充前导零至 8 位（例如 65 → "01000001"）<br>
+            • 若数字的二进制长度 > 8 位 → 保持实际长度，不加前导零（例如 300 → "100101100"）<br>
+            • 支持全部 Unicode（中文、Emoji 等），加密解密完全可逆。<br>
+            • 实时模式下，切换模式或输入内容会立即更新结果。
+        </div>
+        <hr />
+        <div style="font-size:0.7rem; text-align:center; color:#7c8b9c; margin-top:0.5rem;">
+            🔁 加密流程：码点 → +1 → 相邻交换 → 动态二进制（≤8补8）→ 空格分隔 &nbsp;|&nbsp; 解密为逆过程
+        </div>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg">✅ 操作成功</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const inputTextarea = document.getElementById('inputText');
+        const resultTextarea = document.getElementById('resultText');
+        const encryptBtn = document.getElementById('encryptBtn');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const clearInputBtn = document.getElementById('clearInputBtn');
+        const examplePlainBtn = document.getElementById('examplePlainBtn');
+        const exampleCipherBtn = document.getElementById('exampleCipherBtn');
+        const copyBtn = document.getElementById('copyResultBtn');
+        const realtimeCheckbox = document.getElementById('realtimeCheckbox');
+        const currentModeLabel = document.getElementById('currentModeLabel');
+        const toast = document.getElementById('toastMsg');
+
+        // 当前模式: 'encrypt' 或 'decrypt'
+        let currentMode = 'encrypt';
+
+        // 辅助函数: 显示提示
+        function showToast(msg, isError = false) {
+            if (window.toastTimer) clearTimeout(window.toastTimer);
+            toast.textContent = msg || (isError ? '❌ 操作失败' : '✅ 完成');
+            if (isError) {
+                toast.style.background = "rgba(180, 50, 40, 0.95)";
+            } else {
+                toast.style.background = "rgba(11, 43, 47, 0.95)";
+            }
+            toast.classList.add('show');
+            window.toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+                toast.style.background = "rgba(11, 43, 47, 0.95)";
+            }, 2000);
+        }
+
+        // 核心: 动态二进制转换 (≤8位补8，>8位保持原长度)
+        function toDynamicBinary(num) {
+            if (!Number.isInteger(num) || num < 0) {
+                throw new Error(`无效数字: ${num}`);
+            }
+            const bin = num.toString(2);
+            if (bin.length <= 8) {
+                return bin.padStart(8, '0');
+            }
+            return bin;
+        }
+
+        // 相邻交换函数 (对数组进行相邻位置交换，返回新数组)
+        function swapAdjacent(arr) {
+            const newArr = [...arr];
+            for (let i = 0; i < newArr.length - 1; i += 2) {
+                [newArr[i], newArr[i+1]] = [newArr[i+1], newArr[i]];
+            }
+            return newArr;
+        }
+
+        // 加密核心
+        function encrypt(plainText) {
+            if (plainText === "") return "";
+            
+            // 步骤1: 字符串 -> Unicode码点列表 (正确处理代理对)
+            let codePoints = [];
+            for (let ch of plainText) {
+                codePoints.push(ch.codePointAt(0));
+            }
+
+            // 步骤2: 每个数字 +1
+            let step2 = codePoints.map(c => c + 1);
+
+            // 步骤3: 交换相邻两个数字的位置
+            let step3 = swapAdjacent(step2);
+
+            // 步骤4: 转换为动态二进制 (≤8位补8位)
+            // 步骤5: 用空格拼接
+            const binaryStrings = step3.map(num => toDynamicBinary(num));
+            return binaryStrings.join(' ');
+        }
+
+        // 解密核心
+        function decrypt(cipherText) {
+            if (cipherText.trim() === "") return "";
+            const parts = cipherText.trim().split(/\s+/);
+            if (parts.length === 0) return "";
+
+            // 步骤4逆向: 二进制串 -> 十进制数字
+            const numbers = [];
+            for (let bin of parts) {
+                if (!/^[01]+$/.test(bin)) {
+                    throw new Error(`无效的二进制片段: "${bin}"，密文只能包含0和1及空格`);
+                }
+                let num = parseInt(bin, 2);
+                if (isNaN(num)) throw new Error(`二进制解析失败: ${bin}`);
+                numbers.push(num);
+            }
+
+            // 步骤3逆向: 再次相邻交换 (对合运算)
+            let swappedBack = swapAdjacent(numbers);
+
+            // 步骤2逆向: 每个数字减1
+            let stepMinusOne = swappedBack.map(v => v - 1);
+
+            // 步骤1逆向: 数字列表 -> 字符串
+            let resultStr = "";
+            for (let code of stepMinusOne) {
+                if (code < 0 || code > 0x10FFFF) {
+                    throw new Error(`解密后码点异常: ${code} (超出Unicode范围)`);
+                }
+                resultStr += String.fromCodePoint(code);
+            }
+            return resultStr;
+        }
+
+        // 根据当前模式执行转换并更新结果区域
+        function updateResultByMode() {
+            const rawInput = inputTextarea.value;
+            if (rawInput === "" && currentMode === 'encrypt') {
+                resultTextarea.value = "";
+                return;
+            }
+            if (rawInput.trim() === "" && currentMode === 'decrypt') {
+                resultTextarea.value = "";
+                return;
+            }
+            try {
+                if (currentMode === 'encrypt') {
+                    const encrypted = encrypt(rawInput);
+                    resultTextarea.value = encrypted;
+                } else {
+                    const decrypted = decrypt(rawInput);
+                    resultTextarea.value = decrypted;
+                }
+            } catch (err) {
+                console.error(err);
+                resultTextarea.value = `【${currentMode === 'encrypt' ? '加密' : '解密'}错误】${err.message}`;
+                // 不弹toast避免连续报错打扰，但可静默显示在结果框
+            }
+        }
+
+        // 手动触发更新（并显示toast反馈）
+        function manualUpdateWithToast() {
+            try {
+                if (currentMode === 'encrypt') {
+                    const encrypted = encrypt(inputTextarea.value);
+                    resultTextarea.value = encrypted;
+                    showToast(`🔒 加密完成 (${currentMode === 'encrypt' ? '加密模式' : '解密模式'})`);
+                } else {
+                    const decrypted = decrypt(inputTextarea.value);
+                    resultTextarea.value = decrypted;
+                    showToast(`🔓 解密完成 (${currentMode === 'encrypt' ? '加密模式' : '解密模式'})`);
+                }
+            } catch (err) {
+                resultTextarea.value = `【错误】${err.message}`;
+                showToast(err.message, true);
+            }
+        }
+
+        // 切换模式UI
+        function setMode(mode) {
+            currentMode = mode;
+            if (mode === 'encrypt') {
+                currentModeLabel.innerText = '加密';
+                encryptBtn.classList.add('active-mode');
+                decryptBtn.classList.remove('active-mode');
+            } else {
+                currentModeLabel.innerText = '解密';
+                decryptBtn.classList.add('active-mode');
+                encryptBtn.classList.remove('active-mode');
+            }
+            // 模式切换后，如果实时模式开启，立即刷新结果
+            if (realtimeCheckbox.checked) {
+                updateResultByMode();
+            } else {
+                // 非实时模式，也至少显示一次当前结果（用户手动按钮会触发，这里保持结果不清空但重新计算）
+                updateResultByMode();
+            }
+        }
+
+        // 实时模式监听
+        let inputHandler = null;
+        function bindRealtime() {
+            if (inputHandler) {
+                inputTextarea.removeEventListener('input', inputHandler);
+            }
+            if (realtimeCheckbox.checked) {
+                inputHandler = () => updateResultByMode();
+                inputTextarea.addEventListener('input', inputHandler);
+                // 立即刷新一次
+                updateResultByMode();
+            } else {
+                inputHandler = null;
+                // 非实时模式不做自动更新
+            }
+        }
+
+        // 清空输入
+        function clearInput() {
+            inputTextarea.value = "";
+            if (realtimeCheckbox.checked) {
+                updateResultByMode();
+            } else {
+                resultTextarea.value = "";
+            }
+            showToast("🧹 已清空输入及结果区", false);
+        }
+
+        // 填充示例明文（涵盖中文、英文、Emoji及边界测试）
+        function fillExamplePlain() {
+            const demoPlain = "Hello 世界 😀 动态二进制测试 work & shequ 🚀\n小数字: A(65) B(66) 超8位测试: Unicode码点1000→二进制长10位不补零";
+            inputTextarea.value = demoPlain;
+            if (realtimeCheckbox.checked) {
+                updateResultByMode();
+            } else {
+                // 非实时模式下手动更新一次以便查看
+                manualUpdateWithToast();
+            }
+            showToast("📋 示例明文已填充", false);
+        }
+
+        // 填充示例密文 (动态生成当前模式相关的密文，便于测试)
+        function fillExampleCipher() {
+            // 预先准备一个典型明文 -> 加密后的密文，确保展示“≤8位补8位”特征
+            const testPlain = "Ab1";
+            // 手动加密得到准确密文: A(65)->66(二进制1000010,长度7≤8 => 01000010), b(98)->99(1100011,7位=>01100011), 1(49)->50(110010,6位=>00110010)
+            // 交换相邻: 原码点+1后 [66,99,50] -> 交换相邻: 66与99交换 => [99,66,50] (最后一位不变因为奇数长度)
+            // 二进制: 99->1100011(7位)=>01100011, 66->1000010=>01000010, 50->110010=>00110010 -> 密文 "01100011 01000010 00110010"
+            const cipher = "01100011 01000010 00110010";
+            inputTextarea.value = cipher;
+            if (realtimeCheckbox.checked) {
+                // 如果当前是解密模式，会显示解密结果 "Ab1"，完美验证
+                updateResultByMode();
+            } else {
+                manualUpdateWithToast();
+            }
+            showToast("🔢 示例密文已填充 (加密 'Ab1' 所得，二进制≤8位均补零)", false);
+        }
+
+        // 复制结果
+        async function copyResult() {
+            const resultContent = resultTextarea.value;
+            if (resultContent === "") {
+                showToast("⚠️ 没有可复制的内容", true);
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(resultContent);
+                showToast("✅ 已复制结果到剪贴板");
+            } catch (err) {
+                fallbackCopy(resultContent);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            let success = false;
+            try {
+                success = document.execCommand('copy');
+            } catch (e) {}
+            document.body.removeChild(textarea);
+            if (success) showToast("📋 复制成功 (兼容模式)");
+            else showToast("❌ 复制失败，请手动选择", true);
+        }
+
+        // 事件绑定
+        encryptBtn.addEventListener('click', () => {
+            setMode('encrypt');
+            manualUpdateWithToast();
+        });
+        decryptBtn.addEventListener('click', () => {
+            setMode('decrypt');
+            manualUpdateWithToast();
+        });
+        clearInputBtn.addEventListener('click', clearInput);
+        examplePlainBtn.addEventListener('click', fillExamplePlain);
+        exampleCipherBtn.addEventListener('click', fillExampleCipher);
+        copyBtn.addEventListener('click', copyResult);
+        realtimeCheckbox.addEventListener('change', () => {
+            bindRealtime();
+            if (realtimeCheckbox.checked) {
+                updateResultByMode();
+                showToast("⚡ 实时模式已开启，输入内容自动更新结果");
+            } else {
+                showToast("⏸ 实时模式已关闭，请手动点击加密/解密按钮");
+            }
+        });
+
+        // 初始化: 默认加密模式，实时模式开启，并绑定
+        setMode('encrypt');
+        bindRealtime();      // 开启实时监听
+        // 如果输入框为空，显示占位结果（空）
+        if (inputTextarea.value === "") {
+            resultTextarea.value = "";
+        } else {
+            updateResultByMode();
+        }
+    })();
+</script>
+</body>
+</html>
