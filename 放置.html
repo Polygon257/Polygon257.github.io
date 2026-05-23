@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>3D几何拼接</title>
+    <style>
+        body { margin: 0; overflow: hidden; touch-action: none; }
+        /* 工具栏 */
+        .toolbar {
+            position: fixed; top: 20px; left: 20px; z-index: 100;
+            display: flex; gap: 12px;
+            background: rgba(30,30,45,0.75); backdrop-filter: blur(12px);
+            border-radius: 48px; padding: 10px 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .tool-btn {
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 40px;
+            padding: 6px 16px; cursor: pointer; color: white;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 500;
+            transition: 0.2s; touch-action: manipulation;
+        }
+        .tool-btn:active { transform: scale(0.96); }
+        .line-btn { background: rgba(220,100,100,0.6); }
+        .square-btn { background: rgba(80,170,230,0.6); }
+        .cube-btn { background: rgba(100,210,120,0.6); }
+        /* 统计面板 */
+        .stats-panel {
+            position: fixed; top: 100px; left: 20px; z-index: 100;
+            background: rgba(0,0,0,0.65); backdrop-filter: blur(12px);
+            border-radius: 20px; padding: 10px 18px;
+            border-left: 3px solid #ffaa66; color: #f0f0f0;
+            font-family: monospace; font-size: 14px; pointer-events: none;
+            min-width: 160px;
+        }
+        .stat-item { margin: 5px 0; display: flex; justify-content: space-between; gap: 15px; }
+        .stat-value { color: #ffaa66; font-weight: bold; }
+        /* 清除按钮 */
+        .clear-btn {
+            position: fixed; top: 20px; right: 20px; z-index: 100;
+            background: rgba(180,50,50,0.8); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,120,120,0.8); border-radius: 40px;
+            padding: 6px 20px; cursor: pointer; color: white;
+            font-weight: 600; display: flex; align-items: center; gap: 6px;
+            touch-action: manipulation;
+        }
+        @media (max-width: 700px) {
+            .toolbar { padding: 6px 12px; gap: 8px; }
+            .tool-btn { padding: 4px 12px; font-size: 12px; }
+            .stats-panel { top: 85px; font-size: 12px; padding: 6px 12px; min-width: 140px; }
+            .clear-btn { padding: 5px 16px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="tool-btn line-btn" id="btnLine">📏 线段</div>
+        <div class="tool-btn square-btn" id="btnSquare">⬜ 正方形</div>
+        <div class="tool-btn cube-btn" id="btnCube">🧊 正方体</div>
+    </div>
+    <div class="stats-panel">
+        <div class="stat-item"><span>📏 总长:</span><span class="stat-value" id="totalLength">0 cm</span></div>
+        <div class="stat-item"><span>⬜ 总面积:</span><span class="stat-value" id="totalArea">0 cm²</span></div>
+        <div class="stat-item"><span>🧊 总体积:</span><span class="stat-value" id="totalVolume">0 cm³</span></div>
+    </div>
+    <div class="clear-btn" id="clearBtn">🗑️ 清除</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 场景初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a2a);
+        scene.fog = new THREE.FogExp2(0x0a0a2a, 0.008);
+
+        const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(4.2, 3.5, 7.0);
+        camera.lookAt(0, 1.4, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // --- 触屏手势支持 (单指旋转，双指平移/缩放) ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;          // 惯性
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 1.2;
+        controls.zoomSpeed = 1.5;
+        controls.panSpeed = 1.0;
+        controls.enableZoom = true;
+        controls.enablePan = true;              // 双指平移
+        controls.enableTouchRotate = true;
+        controls.touchRotate = true;
+        controls.target.set(0, 1.4, 0);
+
+        // --- 光照 ---
+        const ambientLight = new THREE.AmbientLight(0x404070, 0.65);
+        scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.3);
+        mainLight.position.set(2.5, 5, 3);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
+        const backFill = new THREE.PointLight(0xcc9966, 0.55);
+        backFill.position.set(-1.8, 1.5, -2.2);
+        scene.add(backFill);
+        const coolFill = new THREE.PointLight(0x88aaff, 0.5);
+        coolFill.position.set(2.0, 1.4, 2.2);
+        scene.add(coolFill);
+        // 辅助网格
+        const gridHelper = new THREE.GridHelper(12, 24, 0x88aaff, 0x446688);
+        gridHelper.position.y = -0.2;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.25;
+        scene.add(gridHelper);
+        // 阴影接收面
+        const shadowCatcher = new THREE.Mesh(
+            new THREE.PlaneGeometry(12, 7),
+            new THREE.ShadowMaterial({ opacity: 0.3, color: 0x000000, transparent: true, side: THREE.DoubleSide })
+        );
+        shadowCatcher.rotation.x = -Math.PI / 2;
+        shadowCatcher.position.y = -0.18;
+        shadowCatcher.receiveShadow = true;
+        scene.add(shadowCatcher);
+        
+        // 星空背景 (纯装饰，非干扰)
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 1500;
+        const starPos = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPos[i*3] = (Math.random() - 0.5) * 280;
+            starPos[i*3+1] = (Math.random() - 0.5) * 120;
+            starPos[i*3+2] = (Math.random() - 0.5) * 100 - 50;
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xaaccff, size: 0.065, transparent: true, opacity: 0.5 }));
+        scene.add(stars);
+        function starRotate() { stars.rotation.y += 0.0003; stars.rotation.x += 0.0002; requestAnimationFrame(starRotate); }
+        starRotate();
+
+        // ========= 数据结构 =========
+        const LINE_Y = 0.05;
+        const SQUARE_Y = 1.2;
+        const CUBE_Y = 2.4;
+        let lineNextX = -2.5, squareNextX = -2.5, cubeNextX = -2.5;
+        let lineMeshes = [], squareMeshes = [], cubeMeshes = [];
+        let totalLen = 0, totalArea = 0, totalVol = 0;
+        const lenEl = document.getElementById('totalLength');
+        const areaEl = document.getElementById('totalArea');
+        const volEl = document.getElementById('totalVolume');
+        function updateUI() {
+            lenEl.textContent = totalLen.toFixed(2) + ' cm';
+            areaEl.textContent = totalArea.toFixed(2) + ' cm²';
+            volEl.textContent = totalVol.toFixed(2) + ' cm³';
+        }
+        
+        function disposeGroup(g) { g?.traverse(o => { if(o.isMesh) { o.material?.dispose(); o.geometry?.dispose(); } }); g?.parent?.remove(g); }
+        function clearAll() {
+            lineMeshes.forEach(disposeGroup); squareMeshes.forEach(disposeGroup); cubeMeshes.forEach(disposeGroup);
+            lineMeshes = []; squareMeshes = []; cubeMeshes = [];
+            lineNextX = -2.5; squareNextX = -2.5; cubeNextX = -2.5;
+            totalLen = 0; totalArea = 0; totalVol = 0; updateUI();
+        }
+        
+        // --- 线段 (首尾相连) ---
+        function createLine(x) {
+            const g = new THREE.Group();
+            const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 16), new THREE.MeshStandardMaterial({ color: 0xff7777, emissive: 0x442222, roughness: 0.3 }));
+            cylinder.rotation.z = -Math.PI / 2;
+            cylinder.position.set(0.5, 0, 0);
+            cylinder.castShadow = true;
+            g.add(cylinder);
+            // 装饰细线
+            const edges = new THREE.BufferGeometry();
+            edges.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0.05,0,1,0.05,0, 0,-0.05,0,1,-0.05,0]), 3));
+            g.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffaa99, transparent: true, opacity: 0.5 })));
+            g.position.set(x, LINE_Y, 0);
+            return g;
+        }
+        function addLine() {
+            const g = createLine(lineNextX);
+            scene.add(g);
+            lineMeshes.push(g);
+            lineNextX += 1;
+            totalLen += 1;
+            updateUI();
+            document.getElementById('btnLine').style.transform = 'scale(0.94)';
+            setTimeout(() => document.getElementById('btnLine').style.transform = '', 120);
+        }
+        
+        // --- 正方形 (边靠边) ---
+        function createSquare(x) {
+            const g = new THREE.Group();
+            const box = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 1), new THREE.MeshStandardMaterial({ color: 0x66bbff, emissive: 0x115588, roughness: 0.25, metalness: 0.5, transparent: true, opacity: 0.88 }));
+            box.position.set(0.5, 0.05, 0.5);
+            box.castShadow = true;
+            g.add(box);
+            const edges = new THREE.EdgesGeometry(box.geometry);
+            const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xaaffdd }));
+            wire.position.copy(box.position);
+            g.add(wire);
+            g.position.set(x, SQUARE_Y, 0);
+            return g;
+        }
+        function addSquare() {
+            const g = createSquare(squareNextX);
+            scene.add(g);
+            squareMeshes.push(g);
+            squareNextX += 1;
+            totalArea += 1;
+            updateUI();
+            document.getElementById('btnSquare').style.transform = 'scale(0.94)';
+            setTimeout(() => document.getElementById('btnSquare').style.transform = '', 120);
+        }
+        
+        // --- 正方体 (面贴合) ---
+        function createCube(x) {
+            const g = new THREE.Group();
+            const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x6fcf6f, emissive: 0x227722, roughness: 0.2, metalness: 0.6, transparent: true, opacity: 0.85 }));
+            box.position.set(0.5, 0.5, 0.5);
+            box.castShadow = true;
+            g.add(box);
+            const edges = new THREE.EdgesGeometry(box.geometry);
+            const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xd0ff90 }));
+            wire.position.copy(box.position);
+            g.add(wire);
+            // 辅助轮廓线
+            const pts = [0,0,0,1,0,0, 1,0,0,1,0,1, 1,0,1,0,0,1, 0,0,1,0,0,0, 0,1,0,1,1,0, 1,1,0,1,1,1, 1,1,1,0,1,1, 0,1,1,0,1,0, 0,0,0,0,1,0, 1,0,0,1,1,0, 1,0,1,1,1,1, 0,0,1,0,1,1];
+            const lineGeo = new THREE.BufferGeometry();
+            lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts), 3));
+            g.add(new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ color: 0xc5ff88, transparent: true, opacity: 0.45 })));
+            g.position.set(x, CUBE_Y, 0);
+            return g;
+        }
+        function addCube() {
+            const g = createCube(cubeNextX);
+            scene.add(g);
+            cubeMeshes.push(g);
+            cubeNextX += 1;
+            totalVol += 1;
+            updateUI();
+            document.getElementById('btnCube').style.transform = 'scale(0.94)';
+            setTimeout(() => document.getElementById('btnCube').style.transform = '', 120);
+        }
+        
+        // 绑定事件
+        document.getElementById('btnLine').addEventListener('click', addLine);
+        document.getElementById('btnSquare').addEventListener('click', addSquare);
+        document.getElementById('btnCube').addEventListener('click', addCube);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+        
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        updateUI();
+    </script>
+</body>
+</html>
