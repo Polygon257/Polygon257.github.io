@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>课本P87T2</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        
+        /* 简洁按钮容器 */
+        .view-buttons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            z-index: 20;
+            background: rgba(30, 30, 45, 0.75);
+            backdrop-filter: blur(8px);
+            padding: 10px 15px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .view-btn {
+            background: rgba(20, 30, 55, 0.85);
+            border: none;
+            color: #f0f0f0;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 8px 20px;
+            border-radius: 32px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            letter-spacing: 1px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        
+        .view-btn:hover {
+            background: #3a6ea5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.4);
+        }
+        
+        .view-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .info-tip {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            color: #ccc;
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            pointer-events: none;
+            font-family: monospace;
+            z-index: 10;
+        }
+        
+        @media (max-width: 600px) {
+            .view-btn { padding: 5px 14px; font-size: 13px; }
+            .view-buttons { gap: 8px; padding: 8px 12px; bottom: 12px; right: 12px; }
+            .info-tip { font-size: 9px; bottom: 12px; left: 12px; }
+        }
+        
+        .title {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(5px);
+            padding: 4px 14px;
+            border-radius: 24px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 10;
+            letter-spacing: 0.5px;
+            border-left: 3px solid #5a9eff;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        📐 画出从不同方向看立体图形的形状
+    </div>
+    <div class="view-buttons">
+        <button class="view-btn" id="view-top">⬆️ 上面</button>
+        <button class="view-btn" id="view-left">⬅️ 左面</button>
+        <button class="view-btn" id="view-front">📷 正面</button>
+    </div>
+    <div class="info-tip">
+        🖱️ 鼠标拖拽旋转 | 右键平移 | 滚动缩放
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 初始化场景 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a); // 深灰蓝色背景
+        
+        // --- 正交相机参数调整：增大视野范围，使初始显示的物体大小适中 ---
+        // 物体实际高度范围：Y 从 0 到 2（总高2），为了让物体在画面中更小、更舒适，设置垂直范围更大
+        // 设置 top = 3.2, bottom = -2.6，总高 5.8，物体高度 2 约占 34%，留白充足，网格也完整显示
+        const frustumTop = 3.2;
+        const frustumBottom = -2.6;
+        
+        // 相机初始参数 left/right 将在 resize 中根据宽高比动态计算
+        const camera = new THREE.OrthographicCamera(-3, 3, frustumTop, frustumBottom, 0.1, 50);
+        camera.position.set(0, 1.6, 5);
+        camera.lookAt(0, 1, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+        
+        // --- 轨道控制 (支持正交相机) ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.target.set(0, 1, 0);
+        
+        // --- 光照系统 ---
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.65);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+        directionalLight.position.set(2, 5, 3);
+        scene.add(directionalLight);
+        
+        const backLight = new THREE.DirectionalLight(0xffaa88, 0.45);
+        backLight.position.set(-1, 2, -2);
+        scene.add(backLight);
+        
+        const fillLight = new THREE.PointLight(0x88aaff, 0.35);
+        fillLight.position.set(1.5, 1.8, 2);
+        scene.add(fillLight);
+        
+        const rimLight = new THREE.PointLight(0x6699cc, 0.25);
+        rimLight.position.set(0, -0.8, 0.5);
+        scene.add(rimLight);
+        
+        // --- 辅助网格地面 (半透明，范围加大以匹配新视野) ---
+        const gridHelper = new THREE.GridHelper(8, 24, 0x88aaff, 0x446688);
+        gridHelper.position.y = -0.55;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.25;
+        scene.add(gridHelper);
+        
+        // --- 创建带白色边框的小正方体 (边长=1) ---
+        const UNIFIED_COLOR = 0x5a9eff;   // 统一柔和的蓝色
+        
+        function createCube(x, y, z, color) {
+            const group = new THREE.Group();
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.35,
+                metalness: 0.2,
+                emissive: 0x000000
+            });
+            const cube = new THREE.Mesh(geometry, material);
+            const edgesGeo = new THREE.EdgesGeometry(geometry);
+            const edgesMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+            const wireframe = new THREE.LineSegments(edgesGeo, edgesMat);
+            group.add(cube);
+            group.add(wireframe);
+            group.position.set(x, y, z);
+            return group;
+        }
+        
+        // 第一层: 三个并排 (-1,0.5,0), (0,0.5,0), (1,0.5,0)
+        // 第二层: 一个居中 (0,1.5,0)
+        const cubeLeft = createCube(-1, 0.5, 0, UNIFIED_COLOR);
+        const cubeCenter = createCube(0, 0.5, 0, UNIFIED_COLOR);
+        const cubeRight = createCube(1, 0.5, 0, UNIFIED_COLOR);
+        const cubeTop = createCube(0, 1.5, 0, UNIFIED_COLOR);
+        
+        scene.add(cubeLeft);
+        scene.add(cubeCenter);
+        scene.add(cubeRight);
+        scene.add(cubeTop);
+        
+        // --- 视角切换函数 (上面视角无诡异旋转) ---
+        // 保持相机的 up 方向为 (0,1,0)，俯视时相机位置略微偏离 Z 轴以避免万向锁，但视图自然
+        function setView(viewType) {
+            // 重置相机的 up 方向为标准 Y 轴向上
+            camera.up.set(0, 1, 0);
+            
+            switch(viewType) {
+                case 'top':
+                    // 上面视角: 相机位于正上方，为了不产生旋转，Z 轴给予一个极小的偏移 (0.0001 即可)
+                    camera.position.set(0, 8, 0.0001);
+                    controls.target.set(0, 1, 0);
+                    break;
+                case 'left':
+                    // 左面视角: 相机位于左侧，正对物体
+                    camera.position.set(-6.5, 1.6, 0);
+                    controls.target.set(0, 1, 0);
+                    break;
+                case 'front':
+                    // 正面视角: 相机位于前方
+                    camera.position.set(0, 1.6, 6.5);
+                    controls.target.set(0, 1, 0);
+                    break;
+                default:
+                    return;
+            }
+            // 强制相机看向目标点，并更新轨道控制
+            camera.lookAt(controls.target);
+            controls.update();
+        }
+        
+        // 绑定按钮事件
+        document.getElementById('view-top').addEventListener('click', () => setView('top'));
+        document.getElementById('view-left').addEventListener('click', () => setView('left'));
+        document.getElementById('view-front').addEventListener('click', () => setView('front'));
+        
+        // 初始视角: 正面稍微偏一点，但使用正面视角参数保持一致
+        camera.position.set(0, 1.6, 6);
+        camera.lookAt(0, 1, 0);
+        controls.target.set(0, 1, 0);
+        controls.update();
+        
+        // --- 窗口自适应：动态更新正交相机的 left/right，保持物体比例 ---
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            // 垂直范围固定，水平范围根据宽高比计算
+            const verticalRange = frustumTop - frustumBottom; // 5.8
+            const horizontalRange = verticalRange * aspect;
+            camera.left = -horizontalRange / 2;
+            camera.right = horizontalRange / 2;
+            camera.top = frustumTop;
+            camera.bottom = frustumBottom;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        window.addEventListener('resize', onWindowResize, false);
+        onWindowResize(); // 立即调用，确保初始显示正确
+        
+        // --- 动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 更新轨道控制
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        console.log('课本P87T2: 画出从不同方向看立体图形的形状 | 正交相机，物体大小适中 | 上面视角无诡异旋转');
+    </script>
+</body>
+</html>
