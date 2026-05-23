@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, touch-action: pan-y">
+    <title>2048 稳角AI · 经典黑夜 · 3秒IPS/MPS · 完美终局</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-y;
+        }
+        /* 白天模式变量 */
+        :root {
+            --bg-body-light: linear-gradient(145deg, #f9f6f2 0%, #e9e4da 100%);
+            --container-bg: #bbada0;
+            --grid-bg: #cdc1b4;
+            --tile-empty-bg: #cdc1b4;
+            --text-dark: #776e65;
+            --text-light: #f9f6f2;
+            --btn-bg: #8f7a66;
+            --panel-bg: #cfc2b2;
+            --msg-bg: #ede0c8;
+            --score-row-bg: rgba(187, 173, 160, 0.6);
+            --overlay-bg: rgba(0, 0, 0, 0.6);
+        }
+        /* 黑夜模式变量（经典深色+明亮文字） */
+        body.night-mode {
+            --bg-body-light: #1a1a1a;
+            --container-bg: #2c2c2c;
+            --grid-bg: #3a3a3a;
+            --tile-empty-bg: #2a2a2a;
+            --text-dark: #e0e0e0;
+            --text-light: #1a1a1a;
+            --btn-bg: #5a5a5a;
+            --panel-bg: #4a4a4a;
+            --msg-bg: #2a2a2a;
+            --score-row-bg: rgba(44, 44, 44, 0.8);
+            --overlay-bg: rgba(0, 0, 0, 0.7);
+        }
+        body {
+            font-family: 'Clear Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-body-light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+        body.font-tencent { font-family: 'TencentSans', '腾讯体', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+        body.font-clear-bold { font-family: 'Clear Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; }
+        body.font-msblack { font-family: 'Microsoft YaHei Black', '微软雅黑', 'Microsoft YaHei', sans-serif; font-weight: 900; }
+
+        .game-container {
+            background: var(--container-bg);
+            border-radius: 36px;
+            padding: 24px 20px 28px 20px;
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            max-width: 550px;
+            width: 100%;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .game-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #eee4da;
+            text-shadow: 2px 2px 0 #bbada0;
+            margin: 0;
+            line-height: 1;
+        }
+        .stats-panel {
+            display: flex;
+            gap: 12px;
+            background: var(--panel-bg);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: var(--text-dark);
+            font-size: 14px;
+        }
+        .stats-panel span {
+            margin: 0 2px;
+        }
+        .mode-toggle {
+            background: var(--panel-bg);
+            border-radius: 40px;
+            padding: 6px 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            color: var(--text-dark);
+            font-size: 14px;
+            transition: 0.1s;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        }
+        .mode-toggle:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        .score-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 16px;
+            background: var(--score-row-bg);
+            border-radius: 28px;
+            padding: 6px 16px;
+            width: fit-content;
+            margin-top: 8px;
+        }
+        .score-box, .best-box {
+            background: var(--container-bg);
+            border-radius: 18px;
+            padding: 4px 18px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.3);
+            min-width: 90px;
+        }
+        .score-label, .best-label {
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: #eee4da;
+        }
+        .score-value, .best-value {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+            margin-top: 2px;
+            color: #f9f6f2;
+        }
+        .grid-container {
+            background: var(--grid-bg);
+            border-radius: 24px;
+            padding: 12px;
+            margin-top: 8px;
+            position: relative;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            background-color: var(--grid-bg);
+        }
+        .tile {
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            transition: box-shadow 0.1s, background 0.05s, color 0.1s;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.05), 0 5px 10px rgba(0,0,0,0.1);
+            word-break: break-word;
+            text-align: center;
+            padding: 0 4px;
+        }
+        /* Game Over 遮罩 */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+        .game-overlay-text {
+            font-size: 48px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 4px black;
+        }
+        .game-overlay-btn {
+            background: #f9f6f2;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            color: #776e65;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .game-overlay-btn:active {
+            transform: translateY(2px);
+        }
+        .game-message {
+            text-align: center;
+            margin-top: 18px;
+            font-weight: bold;
+            font-size: 16px;
+            color: var(--text-dark);
+            background: var(--msg-bg);
+            display: inline-block;
+            width: auto;
+            padding: 5px 18px;
+            border-radius: 40px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .ai-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: var(--panel-bg);
+            padding: 6px 16px;
+            border-radius: 60px;
+        }
+        .btn {
+            background: var(--btn-bg);
+            border: none;
+            color: #f9f6f2;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 6px 14px;
+            border-radius: 32px;
+            cursor: pointer;
+            transition: 0.1s;
+            font-family: inherit;
+            box-shadow: 0 2px 0 #5e3e2e;
+        }
+        .btn:active { transform: translateY(2px); box-shadow: 0 0px 0 #5e3e2e; }
+        .btn-primary { background: #3c6e47; box-shadow: 0 2px 0 #1e3a2a; }
+        .btn-danger { background: #ad5f5f; box-shadow: 0 2px 0 #6e3a3a; }
+        .undo-redo {
+            display: flex;
+            gap: 8px;
+            background: var(--panel-bg);
+            padding: 4px 12px;
+            border-radius: 40px;
+        }
+        .speed-slider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--panel-bg);
+            padding: 4px 14px;
+            border-radius: 40px;
+        }
+        .speed-slider label { font-weight: bold; color: var(--text-dark); font-size: 13px; }
+        .speed-values { display: flex; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-dark); align-items: center; }
+        input[type="range"] { width: 130px; cursor: pointer; }
+        .mode-select {
+            background: var(--panel-bg);
+            padding: 4px 12px;
+            border-radius: 40px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .mode-select label { font-weight: bold; color: var(--text-dark); font-size: 13px; }
+        select {
+            background: #f9f6f2;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .hex-panel {
+            background: var(--panel-bg);
+            border-radius: 40px;
+            padding: 8px 16px;
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .hex-input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .hex-input-group label {
+            font-weight: bold;
+            color: var(--text-dark);
+            font-size: 13px;
+        }
+        #hexInput {
+            font-family: monospace;
+            font-size: 16px;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: none;
+            background: #f9f6f2;
+            text-align: center;
+            letter-spacing: 2px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .font-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-start;
+        }
+        .font-selector label { font-weight: bold; color: var(--text-dark); font-size: 13px; }
+        #fontSelect {
+            background: #f9f6f2;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .clear-stats-btn {
+            background: #ad5f5f;
+            margin-left: 8px;
+        }
+        @media (max-width: 550px) {
+            .game-container { padding: 16px; }
+            .game-title { font-size: 38px; }
+            .btn { padding: 5px 10px; font-size: 12px; }
+            .grid { gap: 8px; }
+            .grid-container { padding: 8px; }
+            .score-box, .best-box { min-width: 70px; padding: 4px 10px; }
+            .score-value, .best-value { font-size: 22px; }
+            .hex-input-group { flex-direction: column; align-items: stretch; }
+            #hexInput { width: 100%; }
+            .stats-panel { font-size: 10px; padding: 4px 10px; }
+            .game-overlay-text { font-size: 32px; }
+            .game-overlay-btn { padding: 8px 16px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-header">
+        <div class="game-title">2048</div>
+        <div style="display: flex; gap: 12px;">
+            <div class="stats-panel" id="statsPanel">
+                <span>IPS: <span id="ipsValue">0.00</span></span>
+                <span>MPS: <span id="mpsValue">0.00</span></span>
+            </div>
+            <button class="mode-toggle" id="nightModeBtn">🌙 黑夜模式</button>
+        </div>
+    </div>
+    <div class="score-row">
+        <div class="score-box"><div class="score-label">SCORE</div><div class="score-value" id="scoreValue">0</div></div>
+        <div class="best-box"><div class="score-label">BEST</div><div class="score-value" id="bestValue">0</div></div>
+        <button class="btn clear-stats-btn" id="clearBestBtn">清档</button>
+    </div>
+
+    <div class="grid-container" id="gridContainer">
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="hex-panel">
+        <div class="hex-input-group">
+            <label>16进制编码 (0-9a-h):</label>
+            <input type="text" id="hexInput" placeholder="例: 0000000000000000" maxlength="16" pattern="[0-9a-hA-H]{16}">
+            <button class="btn" id="loadHexBtn">载入棋盘</button>
+        </div>
+        <div class="font-selector">
+            <label>字体:</label>
+            <select id="fontSelect">
+                <option value="clear">Clear Sans (粗体)</option>
+                <option value="tencent">腾讯体</option>
+                <option value="msblack">微软雅黑 Black</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="ai-controls">
+            <button class="btn" id="aiStepBtn">[AI] 单步</button>
+            <button class="btn btn-primary" id="aiAutoStartBtn">[AI] 自动</button>
+            <button class="btn btn-danger" id="aiAutoStopBtn" disabled>停止</button>
+            <button class="btn" id="resetBtn">重置</button>
+        </div>
+        <div class="undo-redo">
+            <button class="btn" id="undoBtn">↩️ 撤销</button>
+            <button class="btn" id="redoBtn">↪️ 重做</button>
+        </div>
+        <div class="mode-select">
+            <label>AI强度:</label>
+            <select id="aiMode">
+                <option value="fast">快速 (深度2)</option>
+                <option value="balanced">均衡 (深度3)</option>
+                <option value="deep">深度4 (稳角)</option>
+                <option value="deep5">深度5 (强力·优化)</option>
+                <option value="deep6">深度6 (极智·剪枝)</option>
+            </select>
+        </div>
+        <div class="speed-slider">
+            <label>AI速度</label>
+            <div class="speed-values"><span>慢</span><input type="range" id="aiSpeed" min="0" max="100" value="88"><span>快</span></div>
+        </div>
+    </div>
+    <div id="gameStatus" class="game-message">稳角策略 | 高阶专属色 | 完美结束判定</div>
+</div>
+
+<script>
+    // ======================= 2048 核心 =======================
+    let board = Array(4).fill().map(() => Array(4).fill(0));
+    let score = 0;
+    let bestScore = 0;
+    let gameOver = false;
+    let winFlag = false;
+    let isNightMode = false;
+    
+    // IPS / MPS 统计（最近3秒滑动窗口）
+    let keyEvents = [];      // 存储 { timestamp, isValid }
+    let lastUpdate = Date.now();
+    
+    function updateStatsDisplay() {
+        const now = Date.now();
+        const threeSecAgo = now - 3000;
+        // 过滤掉3秒前的数据
+        keyEvents = keyEvents.filter(e => e.timestamp > threeSecAgo);
+        const total = keyEvents.length;
+        const valid = keyEvents.filter(e => e.isValid).length;
+        const ips = (total / 3).toFixed(2);
+        const mps = (valid / 3).toFixed(2);
+        document.getElementById('ipsValue').innerText = ips;
+        document.getElementById('mpsValue').innerText = mps;
+    }
+    
+    function recordKeyPress(isValid) {
+        keyEvents.push({ timestamp: Date.now(), isValid: isValid });
+        updateStatsDisplay();
+    }
+    
+    function resetStats() {
+        keyEvents = [];
+        updateStatsDisplay();
+    }
+    
+    // 每0.5秒自动刷新一次显示
+    setInterval(() => updateStatsDisplay(), 500);
+    
+    // 历史记录
+    let historyUndo = [];
+    let historyRedo = [];
+    const MAX_HISTORY = 100;
+    
+    function pushToHistory() {
+        const state = {
+            board: JSON.parse(JSON.stringify(board)),
+            score: score,
+            gameOver: gameOver,
+            winFlag: winFlag
+        };
+        historyUndo.push(state);
+        if (historyUndo.length > MAX_HISTORY) historyUndo.shift();
+        historyRedo = [];
+        updateUndoRedoButtons();
+    }
+    
+    function undo() {
+        if (historyUndo.length === 0) return;
+        const currentState = {
+            board: JSON.parse(JSON.stringify(board)),
+            score: score,
+            gameOver: gameOver,
+            winFlag: winFlag
+        };
+        historyRedo.push(currentState);
+        if (historyRedo.length > MAX_HISTORY) historyRedo.shift();
+        const prev = historyUndo.pop();
+        board = prev.board;
+        score = prev.score;
+        gameOver = prev.gameOver;
+        winFlag = prev.winFlag;
+        updateUI();
+        gameStatusDiv.innerText = '已撤销';
+        updateUndoRedoButtons();
+        updateGameOverlay();
+    }
+    
+    function redo() {
+        if (historyRedo.length === 0) return;
+        const next = historyRedo.pop();
+        const currentState = {
+            board: JSON.parse(JSON.stringify(board)),
+            score: score,
+            gameOver: gameOver,
+            winFlag: winFlag
+        };
+        historyUndo.push(currentState);
+        if (historyUndo.length > MAX_HISTORY) historyUndo.shift();
+        board = next.board;
+        score = next.score;
+        gameOver = next.gameOver;
+        winFlag = next.winFlag;
+        updateUI();
+        gameStatusDiv.innerText = '已重做';
+        updateUndoRedoButtons();
+        updateGameOverlay();
+    }
+    
+    function updateUndoRedoButtons() {
+        document.getElementById('undoBtn').disabled = (historyUndo.length === 0);
+        document.getElementById('redoBtn').disabled = (historyRedo.length === 0);
+    }
+    
+    let autoInterval = null;
+    let isAutoRunning = false;
+    
+    // DOM
+    const gridContainer = document.getElementById('gridContainer');
+    const gridEl = document.getElementById('grid');
+    const scoreEl = document.getElementById('scoreValue');
+    const bestEl = document.getElementById('bestValue');
+    const resetBtn = document.getElementById('resetBtn');
+    const aiStepBtn = document.getElementById('aiStepBtn');
+    const aiAutoStartBtn = document.getElementById('aiAutoStartBtn');
+    const aiAutoStopBtn = document.getElementById('aiAutoStopBtn');
+    const aiSpeedSlider = document.getElementById('aiSpeed');
+    const aiModeSelect = document.getElementById('aiMode');
+    const gameStatusDiv = document.getElementById('gameStatus');
+    const hexInput = document.getElementById('hexInput');
+    const loadHexBtn = document.getElementById('loadHexBtn');
+    const fontSelect = document.getElementById('fontSelect');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const nightModeBtn = document.getElementById('nightModeBtn');
+    const clearBestBtn = document.getElementById('clearBestBtn');
+    
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    
+    // 清档按钮：清除所有分数记录（最高分清零，当前分数归零，重置游戏）
+    function clearAllScores() {
+        if (isAutoRunning) stopAutoAI();
+        localStorage.removeItem('2048_best_score');
+        bestScore = 0;
+        bestEl.innerText = '0';
+        // 重置游戏（会重置当前分数和棋盘）
+        resetGame();
+        gameStatusDiv.innerText = '已清除所有分数记录，游戏已重置';
+    }
+    clearBestBtn.addEventListener('click', clearAllScores);
+    
+    // 黑夜模式切换（经典深色+明亮文字，方块颜色降低亮度）
+    function toggleNightMode() {
+        isNightMode = !isNightMode;
+        document.body.classList.toggle('night-mode', isNightMode);
+        nightModeBtn.innerText = isNightMode ? '☀️ 白天模式' : '🌙 黑夜模式';
+        updateUI(); // 重新渲染所有方块应用新颜色
+    }
+    nightModeBtn.addEventListener('click', toggleNightMode);
+    
+    // 评估缓存
+    const evalCache = new Map();
+    const MAX_CACHE = 200000;
+    function getBoardKey(b) {
+        return `${b[0][0]},${b[0][1]},${b[0][2]},${b[0][3]}|${b[1][0]},${b[1][1]},${b[1][2]},${b[1][3]}|${b[2][0]},${b[2][1]},${b[2][2]},${b[2][3]}|${b[3][0]},${b[3][1]},${b[3][2]},${b[3][3]}`;
+    }
+    function cachedEvaluate(boardState) {
+        const key = getBoardKey(boardState);
+        if(evalCache.has(key)) return evalCache.get(key);
+        const val = evaluateBoard(boardState);
+        if(evalCache.size < MAX_CACHE) evalCache.set(key, val);
+        return val;
+    }
+    
+    // 字体切换
+    function setFont(fontType) {
+        const body = document.body;
+        body.classList.remove('font-tencent', 'font-clear-bold', 'font-msblack');
+        if(fontType === 'tencent') body.classList.add('font-tencent');
+        else if(fontType === 'msblack') body.classList.add('font-msblack');
+        else body.classList.add('font-clear-bold');
+        localStorage.setItem('2048_font', fontType);
+    }
+    function loadFontPreference() {
+        const saved = localStorage.getItem('2048_font');
+        if(saved && (saved === 'tencent' || saved === 'msblack' || saved === 'clear')) {
+            fontSelect.value = saved;
+            setFont(saved);
+        } else {
+            fontSelect.value = 'clear';
+            setFont('clear');
+        }
+    }
+    fontSelect.addEventListener('change', () => setFont(fontSelect.value));
+    
+    function loadBestScore() {
+        const saved = localStorage.getItem('2048_best_score');
+        if(saved && !isNaN(parseInt(saved))) bestScore = parseInt(saved);
+        else bestScore = 0;
+        bestEl.innerText = bestScore;
+    }
+    function saveBestScore() {
+        if(score > bestScore) {
+            bestScore = score;
+            bestEl.innerText = bestScore;
+            localStorage.setItem('2048_best_score', bestScore);
+        }
+    }
+    
+    // ========== 颜色（经典黑夜：降低亮度，文字变亮）==========
+    const dayTileColors = {
+        0: '#cdc1b4',
+        2: '#eee4da', 4: '#ede0c8', 8: '#f2b179', 16: '#f59563', 32: '#f67c5f', 64: '#f65e3b',
+        128: '#edcf72', 256: '#edcc61', 512: '#edc850', 1024: '#edc53f', 2048: '#edc22e',
+        4096: '#e800aa', 8192: '#bf009c', 16384: '#94018a', 32768: '#6c0078', 65536: '#000000', 131072: '#000000'
+    };
+    function getTileColor(val, night) {
+        if (!night) return dayTileColors[val] || '#cdc1b4';
+        if (val === 0) return '#2a2a2a';
+        // 黑夜模式：降低亮度到30%左右
+        let bg = dayTileColors[val] || '#000000';
+        let r, g, b;
+        if (bg.startsWith('#')) {
+            const bigint = parseInt(bg.slice(1), 16);
+            r = (bigint >> 16) & 255;
+            g = (bigint >> 8) & 255;
+            b = bigint & 255;
+        } else {
+            r = 200; g = 200; b = 200;
+        }
+        r = Math.floor(r * 0.3);
+        g = Math.floor(g * 0.3);
+        b = Math.floor(b * 0.3);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+    
+    function getTextColor(val, night) {
+        if (!night) return (val === 2 || val === 4) ? '#776e65' : '#f9f6f2';
+        // 黑夜模式文字为浅色
+        return (val === 2 || val === 4) ? '#e0e0e0' : '#f9f6f2';
+    }
+    
+    function getFontSize(val) {
+        if (val >= 100000) return '16px';
+        if (val >= 10000) return '20px';
+        if (val >= 1000) return '26px';
+        return '32px';
+    }
+    
+    function getGlowShadow(val, bgColor, night) {
+        if (val < 128) return 'none';
+        let intensity = 0;
+        if (val >= 131072) intensity = 1.0;
+        else if (val >= 65536) intensity = 0.9;
+        else if (val >= 32768) intensity = 0.8;
+        else if (val >= 16384) intensity = 0.7;
+        else if (val >= 8192) intensity = 0.6;
+        else if (val >= 4096) intensity = 0.5;
+        else if (val >= 2048) intensity = 0.4;
+        else if (val >= 1024) intensity = 0.35;
+        else if (val >= 512) intensity = 0.3;
+        else if (val >= 256) intensity = 0.25;
+        else intensity = 0.2;
+        const alpha = 0.5 - intensity * 0.25;
+        const blur = 6 + intensity * 22;
+        const spread = 2 + intensity * 6;
+        let r, g, b;
+        if (bgColor.startsWith('#')) {
+            const bigint = parseInt(bgColor.slice(1), 16);
+            r = (bigint >> 16) & 255;
+            g = (bigint >> 8) & 255;
+            b = bigint & 255;
+        } else if (bgColor.startsWith('rgb')) {
+            const match = bgColor.match(/\d+/g);
+            r = parseInt(match[0]); g = parseInt(match[1]); b = parseInt(match[2]);
+        } else {
+            r = 255; g = 255; b = 255;
+        }
+        return `0 0 ${blur}px ${spread}px rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    function updateTileStyle(tile, val) {
+        const bg = getTileColor(val, isNightMode);
+        const color = getTextColor(val, isNightMode);
+        const glow = getGlowShadow(val, bg, isNightMode);
+        tile.style.boxShadow = '';
+        tile.style.backgroundColor = bg;
+        tile.style.color = color;
+        tile.style.fontSize = getFontSize(val);
+        tile.style.boxShadow = `${glow}, inset 0 -2px 0 rgba(0,0,0,0.05), 0 5px 10px rgba(0,0,0,0.1)`;
+    }
+    
+    // Game Over 遮罩管理
+    let overlayElement = null;
+    function updateGameOverlay() {
+        if (gameOver) {
+            if (!overlayElement) {
+                overlayElement = document.createElement('div');
+                overlayElement.className = 'game-overlay';
+                overlayElement.innerHTML = `
+                    <div class="game-overlay-text">Game Over!</div>
+                    <button class="game-overlay-btn" id="overlayResetBtn">重置游戏</button>
+                `;
+                gridContainer.style.position = 'relative';
+                gridContainer.appendChild(overlayElement);
+                document.getElementById('overlayResetBtn').addEventListener('click', () => {
+                    resetAndStop();
+                });
+            }
+        } else {
+            if (overlayElement) {
+                overlayElement.remove();
+                overlayElement = null;
+            }
+        }
+    }
+    
+    function updateUI() {
+        scoreEl.innerText = score;
+        bestEl.innerText = bestScore;
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const val = board[i][j];
+                const tile = document.querySelector(`.tile[data-row='${i}'][data-col='${j}']`);
+                if(tile) {
+                    if(val === 0) {
+                        tile.innerText = '';
+                        updateTileStyle(tile, 0);
+                    } else {
+                        tile.innerText = val;
+                        updateTileStyle(tile, val);
+                    }
+                    tile.setAttribute('data-value', val === 0 ? '0' : val);
+                }
+            }
+        }
+        if(!winFlag) {
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(board[i][j] === 2048) {
+                winFlag = true;
+                gameStatusDiv.innerText = '达成2048！AI继续冲击4096+';
+                setTimeout(()=>{ if(!gameOver) gameStatusDiv.innerText = '稳角蛇形运行中'; },2000);
+                break;
+            }
+        }
+        if(gameOver) {
+            gameStatusDiv.innerText = '游戏结束！点击重置继续';
+            if(isAutoRunning) stopAutoAI();
+        } else if(!isAutoRunning) {
+            gameStatusDiv.innerText = '滑动屏幕或方向键 | AI自动 (稳角+十六进制)';
+        }
+        updateGameOverlay();
+    }
+    
+    function addRandomTile() {
+        const emptyCells = [];
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(board[i][j] === 0) emptyCells.push([i,j]);
+        if(emptyCells.length === 0) return false;
+        const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        board[row][col] = Math.random() < 0.9 ? 2 : 4;
+        return true;
+    }
+    
+    function moveLeftAndMerge(rowArr) {
+        let filtered = rowArr.filter(v => v !== 0);
+        let newRow = [];
+        let gain = 0;
+        for(let i=0; i<filtered.length; i++) {
+            if(i+1 < filtered.length && filtered[i] === filtered[i+1]) {
+                let merged = filtered[i] * 2;
+                newRow.push(merged);
+                gain += merged;
+                i++;
+            } else {
+                newRow.push(filtered[i]);
+            }
+        }
+        while(newRow.length < 4) newRow.push(0);
+        return { newRow, gain };
+    }
+    
+    function executeMove(boardState, direction) {
+        let newBoard = JSON.parse(JSON.stringify(boardState));
+        let totalGain = 0;
+        let moved = false;
+        if(direction === 'left') {
+            for(let i=0;i<4;i++) {
+                const original = newBoard[i];
+                const { newRow, gain } = moveLeftAndMerge(original);
+                if(original[0]!==newRow[0] || original[1]!==newRow[1] || original[2]!==newRow[2] || original[3]!==newRow[3]) moved = true;
+                newBoard[i] = newRow;
+                totalGain += gain;
+            }
+        }
+        else if(direction === 'right') {
+            for(let i=0;i<4;i++) {
+                const original = newBoard[i];
+                const reversed = original.slice().reverse();
+                const { newRow: mergedRev, gain } = moveLeftAndMerge(reversed);
+                const newRow = mergedRev.reverse();
+                if(original[0]!==newRow[0] || original[1]!==newRow[1] || original[2]!==newRow[2] || original[3]!==newRow[3]) moved = true;
+                newBoard[i] = newRow;
+                totalGain += gain;
+            }
+        }
+        else if(direction === 'up') {
+            let transposed = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) transposed[j][i] = newBoard[i][j];
+            let movedUp = false;
+            for(let i=0;i<4;i++) {
+                const original = transposed[i];
+                const { newRow, gain } = moveLeftAndMerge(original);
+                if(original[0]!==newRow[0] || original[1]!==newRow[1] || original[2]!==newRow[2] || original[3]!==newRow[3]) movedUp = true;
+                transposed[i] = newRow;
+                totalGain += gain;
+            }
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) newBoard[j][i] = transposed[i][j];
+            moved = moved || movedUp;
+        }
+        else if(direction === 'down') {
+            let transposed = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) transposed[j][i] = newBoard[i][j];
+            let movedDown = false;
+            for(let i=0;i<4;i++) {
+                const original = transposed[i];
+                const reversed = original.slice().reverse();
+                const { newRow: mergedRev, gain } = moveLeftAndMerge(reversed);
+                const newRow = mergedRev.reverse();
+                if(original[0]!==newRow[0] || original[1]!==newRow[1] || original[2]!==newRow[2] || original[3]!==newRow[3]) movedDown = true;
+                transposed[i] = newRow;
+                totalGain += gain;
+            }
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) newBoard[j][i] = transposed[i][j];
+            moved = moved || movedDown;
+        }
+        return { newBoard, gain: totalGain, moved };
+    }
+    
+    function isGameReallyOver() {
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(board[i][j] === 0) return false;
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const val = board[i][j];
+                if(j+1<4 && board[i][j+1] === val) return false;
+                if(i+1<4 && board[i+1][j] === val) return false;
+            }
+        }
+        return true;
+    }
+    
+    function performMoveAndUpdate(direction, recordHistory = true, isManual = false) {
+        if(gameOver) return false;
+        const { newBoard, gain, moved } = executeMove(board, direction);
+        if(!moved) {
+            if (isManual) recordKeyPress(false);
+            return false;
+        }
+        if (isManual) recordKeyPress(true);
+        if (recordHistory) pushToHistory();
+        board = newBoard;
+        score += gain;
+        saveBestScore();
+        updateUI();
+        if (!isGameReallyOver()) {
+            addRandomTile();
+            updateUI();
+        }
+        if (isGameReallyOver()) {
+            gameOver = true;
+            updateUI();
+            if(isAutoRunning) stopAutoAI();
+        }
+        return true;
+    }
+    
+    function resetGame() {
+        if(isAutoRunning) stopAutoAI();
+        evalCache.clear();
+        historyUndo = [];
+        historyRedo = [];
+        updateUndoRedoButtons();
+        board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+        score = 0;
+        gameOver = false;
+        winFlag = false;
+        addRandomTile();
+        addRandomTile();
+        updateUI();
+        saveBestScore();
+        gameStatusDiv.innerText = '新对局 | 稳角蛇形AI已启动';
+        resetStats();
+        updateGameOverlay();
+    }
+    
+    // ======================= 评估函数 (稳角蛇形) =======================
+    function evaluateBoard(boardState) {
+        let emptyCells = 0;
+        let maxTile = 0;
+        let maxRow = -1, maxCol = -1;
+        let smoothness = 0;
+        
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const val = boardState[i][j];
+                if(val === 0) emptyCells++;
+                else if(val > maxTile) {
+                    maxTile = val;
+                    maxRow = i; maxCol = j;
+                }
+            }
+        }
+        
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const val = boardState[i][j];
+                if(val !== 0) {
+                    if(j+1<4 && boardState[i][j+1] !== 0) smoothness -= Math.abs(val - boardState[i][j+1]);
+                    if(i+1<4 && boardState[i+1][j] !== 0) smoothness -= Math.abs(val - boardState[i+1][j]);
+                }
+            }
+        }
+        
+        const targetRow = 3, targetCol = 0;
+        let cornerBonus = 0;
+        if(maxRow === targetRow && maxCol === targetCol) {
+            cornerBonus = maxTile * 7.0;
+        } else {
+            let dist = Math.abs(maxRow - targetRow) + Math.abs(maxCol - targetCol);
+            if(emptyCells <= 2 && maxTile >= 128) {
+                cornerBonus = -maxTile * 0.8;
+            } else {
+                cornerBonus = -maxTile * (2.0 + dist * 1.2);
+            }
+        }
+        
+        const snakePath = [
+            [3,0],[2,0],[1,0],[0,0],
+            [0,1],[0,2],[0,3],
+            [1,3],[1,2],[1,1],
+            [2,1],[2,2],[2,3],
+            [3,3],[3,2],[3,1]
+        ];
+        let snakeReward = 0;
+        let prevVal = Infinity;
+        let chainBroken = false;
+        for(let idx=0; idx<snakePath.length; idx++) {
+            const [r,c] = snakePath[idx];
+            const val = boardState[r][c];
+            if(val !== 0) {
+                if(prevVal !== Infinity) {
+                    if(val <= prevVal) snakeReward += (prevVal - val) * 2.5 + 60;
+                    else { snakeReward -= 400; chainBroken = true; }
+                }
+                prevVal = val;
+            } else {
+                snakeReward -= 12;
+                prevVal = Infinity;
+            }
+        }
+        if(boardState[3][0] === maxTile && !chainBroken) snakeReward += maxTile * 2.0;
+        
+        let rescueBonus = 0;
+        if(emptyCells <= 3) {
+            let mergeScore = 0;
+            for(let i=0;i<4;i++) {
+                for(let j=0;j<4;j++) {
+                    let v = boardState[i][j];
+                    if(v > 0) {
+                        if(i+1<4 && boardState[i+1][j] === v) mergeScore += v * 3;
+                        if(j+1<4 && boardState[i][j+1] === v) mergeScore += v * 3;
+                    }
+                }
+            }
+            rescueBonus = mergeScore * 1.5 + emptyCells * 400;
+        }
+        
+        let mergeBonus = 0;
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                let v = boardState[i][j];
+                if(v > 0) {
+                    if(i+1<4 && boardState[i+1][j] === v) mergeBonus += v * 1.2;
+                    if(j+1<4 && boardState[i][j+1] === v) mergeBonus += v * 1.2;
+                }
+            }
+        }
+        
+        let mono = 0;
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<3;j++) {
+                if(boardState[i][j] && boardState[i][j+1] && boardState[i][j] >= boardState[i][j+1]) mono += 45;
+            }
+        }
+        for(let j=0;j<4;j++) {
+            for(let i=0;i<3;i++) {
+                if(boardState[i][j] && boardState[i+1][j] && boardState[i][j] >= boardState[i+1][j]) mono += 45;
+            }
+        }
+        
+        let edgeBonus = 0;
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const val = boardState[i][j];
+                if(val !== 0) {
+                    if(j === 0 || i === 3) edgeBonus += val * 0.6;
+                    else if(i === 0 || j === 3) edgeBonus += val * 0.2;
+                }
+            }
+        }
+        
+        let total = (emptyCells * 280) + (smoothness * 2.0) + cornerBonus +
+                    snakeReward * 1.6 + mergeBonus * 1.2 + rescueBonus +
+                    mono * 0.8 + edgeBonus * 1.1 + (maxTile * 6);
+        return total;
+    }
+    
+    // ======================= Expectimax 深度优化 =======================
+    function getEmptyCellsFast(boardState) {
+        let empty = [];
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(boardState[i][j] === 0) empty.push([i,j]);
+        return empty;
+    }
+    
+    let currentSampleLimit = 8;
+    function getPossibleRandomBoardsSampled(boardState) {
+        let empty = getEmptyCellsFast(boardState);
+        if(empty.length === 0) return [];
+        let sampled = empty;
+        if(empty.length > currentSampleLimit) {
+            const shuffled = [...empty];
+            for(let i=shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            sampled = shuffled.slice(0, currentSampleLimit);
+        }
+        const results = [];
+        const prob2 = 0.9 / sampled.length;
+        const prob4 = 0.1 / sampled.length;
+        for(let [row,col] of sampled) {
+            let newBoard2 = JSON.parse(JSON.stringify(boardState));
+            newBoard2[row][col] = 2;
+            results.push({ board: newBoard2, prob: prob2 });
+            let newBoard4 = JSON.parse(JSON.stringify(boardState));
+            newBoard4[row][col] = 4;
+            results.push({ board: newBoard4, prob: prob4 });
+        }
+        return results;
+    }
+    
+    let dirPriority = ['down', 'left', 'right', 'up'];
+    
+    function expectimax(boardState, depth, isMaximizing) {
+        if(depth === 0) return cachedEvaluate(boardState);
+        if(isMaximizing) {
+            let best = -Infinity;
+            for(let dir of dirPriority) {
+                const { newBoard, moved } = executeMove(boardState, dir);
+                if(moved) {
+                    let val = expectimax(newBoard, depth-1, false);
+                    if(val > best) best = val;
+                }
+            }
+            if(best === -Infinity) {
+                const dirs = ['up', 'down', 'left', 'right'];
+                for(let dir of dirs) {
+                    if(dirPriority.includes(dir)) continue;
+                    const { newBoard, moved } = executeMove(boardState, dir);
+                    if(moved) {
+                        let val = expectimax(newBoard, depth-1, false);
+                        if(val > best) best = val;
+                    }
+                }
+            }
+            return best;
+        } else {
+            const possibilities = getPossibleRandomBoardsSampled(boardState);
+            if(possibilities.length === 0) return cachedEvaluate(boardState);
+            let expected = 0;
+            for(let { board: nextBoard, prob } of possibilities) {
+                expected += expectimax(nextBoard, depth-1, true) * prob;
+            }
+            return expected;
+        }
+    }
+    
+    function getBestAIMove() {
+        if(gameOver) return null;
+        const mode = aiModeSelect.value;
+        let depth = 2;
+        if(mode === 'fast') depth = 2;
+        else if(mode === 'balanced') depth = 3;
+        else if(mode === 'deep') depth = 4;
+        else if(mode === 'deep5') depth = 5;
+        else depth = 6;
+        
+        if(depth >= 5) currentSampleLimit = 5;
+        else currentSampleLimit = 7;
+        
+        let maxTile = 0, maxRow = -1, maxCol = -1;
+        for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(board[i][j] > maxTile) { maxTile = board[i][j]; maxRow=i; maxCol=j; }
+        const isLargeInCorner = (maxRow === 3 && maxCol === 0);
+        
+        let bestDir = null;
+        let bestValue = -Infinity;
+        for(let dir of dirPriority) {
+            const { newBoard, moved } = executeMove(board, dir);
+            if(!moved) continue;
+            let newMaxTile = 0, newMaxRow = -1, newMaxCol = -1;
+            for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(newBoard[i][j] > newMaxTile) { newMaxTile = newBoard[i][j]; newMaxRow=i; newMaxCol=j; }
+            let baseVal = expectimax(newBoard, depth, false);
+            if(isLargeInCorner && !(newMaxRow === 3 && newMaxCol === 0)) {
+                baseVal -= maxTile * 12;
+            }
+            if(newMaxRow === 3 && newMaxCol === 0) {
+                baseVal += newMaxTile * 1.5;
+            }
+            if(baseVal > bestValue) {
+                bestValue = baseVal;
+                bestDir = dir;
+            }
+        }
+        if(bestDir) {
+            dirPriority = [bestDir, ...dirPriority.filter(d => d !== bestDir)];
+        }
+        return bestDir;
+    }
+    
+    function aiMoveStep() {
+        if(gameOver) { if(isAutoRunning) stopAutoAI(); return false; }
+        const bestDir = getBestAIMove();
+        if(!bestDir) {
+            if(isGameReallyOver()) {
+                gameOver = true; updateUI();
+                if(isAutoRunning) stopAutoAI();
+                gameStatusDiv.innerText = 'AI无合法移动，游戏结束';
+            }
+            return false;
+        }
+        performMoveAndUpdate(bestDir, true, false);
+        return true;
+    }
+    
+    function getDelayFromSpeed(speedVal) {
+        const minDelay = 25, maxDelay = 420;
+        return maxDelay - (speedVal / 100) * (maxDelay - minDelay);
+    }
+    
+    function startAutoAI() {
+        if(isAutoRunning) return;
+        if(gameOver) { gameStatusDiv.innerText = '游戏已结束，重置后再启动AI'; return; }
+        isAutoRunning = true;
+        const intervalMs = getDelayFromSpeed(parseInt(aiSpeedSlider.value));
+        autoInterval = setInterval(() => {
+            if(!isAutoRunning) return;
+            if(gameOver) { stopAutoAI(); return; }
+            aiMoveStep();
+            if(gameOver) stopAutoAI();
+        }, intervalMs);
+        aiAutoStartBtn.disabled = true;
+        aiAutoStopBtn.disabled = false;
+        const mode = aiModeSelect.value;
+        let depthStr = '4';
+        if(mode === 'fast') depthStr = '2';
+        else if(mode === 'balanced') depthStr = '3';
+        else if(mode === 'deep') depthStr = '4';
+        else if(mode === 'deep5') depthStr = '5';
+        else depthStr = '6';
+        gameStatusDiv.innerText = `AI自动 (稳角蛇形) 深度${depthStr} 间隔${Math.round(intervalMs)}ms`;
+    }
+    
+    function stopAutoAI() {
+        if(autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+        isAutoRunning = false;
+        aiAutoStartBtn.disabled = false;
+        aiAutoStopBtn.disabled = true;
+        if(!gameOver) gameStatusDiv.innerText = 'AI已停止 | 可手动滑动/方向键';
+        else gameStatusDiv.innerText = '游戏结束，重置继续';
+    }
+    
+    function renderGrid() {
+        gridEl.innerHTML = '';
+        for(let i=0;i<4;i++) {
+            for(let j=0;j<4;j++) {
+                const tile = document.createElement('div');
+                tile.classList.add('tile');
+                tile.setAttribute('data-row', i);
+                tile.setAttribute('data-col', j);
+                const val = board[i][j];
+                if(val !== 0) tile.innerText = val;
+                else tile.innerText = '';
+                updateTileStyle(tile, val);
+                gridEl.appendChild(tile);
+            }
+        }
+        updateUI();
+    }
+    
+    // 十六进制导入
+    const hexMap = {
+        '0':0,'1':2,'2':4,'3':8,'4':16,'5':32,'6':64,'7':128,'8':256,'9':512,
+        'a':1024,'b':2048,'c':4096,'d':8192,'e':16384,'f':32768,'g':65536,'h':131072,
+        'A':1024,'B':2048,'C':4096,'D':8192,'E':16384,'F':32768,'G':65536,'H':131072
+    };
+    function loadHexBoard() {
+        let hexStr = hexInput.value.trim().toLowerCase();
+        if(hexStr.length !== 16) {
+            gameStatusDiv.innerText = '错误: 16进制编码长度必须为16个字符 (0-9a-h)';
+            return false;
+        }
+        let newBoard = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+        for(let i=0;i<16;i++) {
+            const ch = hexStr[i];
+            const val = hexMap[ch];
+            if(val === undefined) {
+                gameStatusDiv.innerText = `错误: 无效字符 ${ch}，只允许0-9a-h`;
+                return false;
+            }
+            const row = Math.floor(i / 4);
+            const col = i % 4;
+            newBoard[row][col] = val;
+        }
+        if(isAutoRunning) stopAutoAI();
+        evalCache.clear();
+        historyUndo = [];
+        historyRedo = [];
+        updateUndoRedoButtons();
+        board = newBoard;
+        score = 0;
+        gameOver = false;
+        winFlag = false;
+        updateUI();
+        saveBestScore();
+        gameStatusDiv.innerText = '已加载十六进制棋盘，分数已清零，AI继续';
+        resetStats();
+        updateGameOverlay();
+        return true;
+    }
+    loadHexBtn.addEventListener('click', loadHexBoard);
+    
+    // 触摸滑动
+    let touchStartX = 0, touchStartY = 0;
+    function handleTouchStart(e) { e.preventDefault(); const t = e.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY; }
+    function handleTouchMove(e) { e.preventDefault(); }
+    function handleTouchEnd(e) {
+        if(isAutoRunning || gameOver) return;
+        e.preventDefault();
+        if(touchStartX===0 && touchStartY===0) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if(Math.abs(dx)<15 && Math.abs(dy)<15) return;
+        let dir = null;
+        if(Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'right' : 'left';
+        else dir = dy > 0 ? 'down' : 'up';
+        performMoveAndUpdate(dir, true, true);
+        touchStartX = touchStartY = 0;
+    }
+    
+    function resetAndStop() { if(isAutoRunning) stopAutoAI(); evalCache.clear(); resetGame(); renderGrid(); }
+    function onAIStep() { if(isAutoRunning) { gameStatusDiv.innerText = '请先停止AI自动'; return; } if(gameOver) { gameStatusDiv.innerText = '游戏结束，请重置'; return; } aiMoveStep(); }
+    
+    aiSpeedSlider.addEventListener('input', () => { if(isAutoRunning) { stopAutoAI(); startAutoAI(); } });
+    aiModeSelect.addEventListener('change', () => { if(isAutoRunning) { stopAutoAI(); startAutoAI(); } });
+    window.addEventListener('keydown', (e) => {
+        if(isAutoRunning || gameOver) return;
+        let dir = null;
+        if(e.key === 'ArrowUp') dir = 'up';
+        else if(e.key === 'ArrowDown') dir = 'down';
+        else if(e.key === 'ArrowLeft') dir = 'left';
+        else if(e.key === 'ArrowRight') dir = 'right';
+        if(dir) { e.preventDefault(); performMoveAndUpdate(dir, true, true); }
+    });
+    
+    const gameContainerDiv = document.querySelector('.grid-container');
+    gameContainerDiv.addEventListener('touchstart', handleTouchStart, {passive:false});
+    gameContainerDiv.addEventListener('touchmove', handleTouchMove, {passive:false});
+    gameContainerDiv.addEventListener('touchend', handleTouchEnd);
+    
+    resetBtn.addEventListener('click', resetAndStop);
+    aiStepBtn.addEventListener('click', onAIStep);
+    aiAutoStartBtn.addEventListener('click', startAutoAI);
+    aiAutoStopBtn.addEventListener('click', stopAutoAI);
+    
+    function init() {
+        loadBestScore();
+        loadFontPreference();
+        resetGame();
+        renderGrid();
+        hexInput.value = "0000000000000000";
+        updateUndoRedoButtons();
+    }
+    init();
+</script>
+</body>
+</html>
