@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>六下课本P90T14</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Roboto', 'Microsoft YaHei', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            touch-action: none;
+            background: radial-gradient(circle at 20% 30%, #0a0a2a, #050510);
+        }
+        /* 左上角主面板 */
+        .top-left-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            background: rgba(20, 20, 45, 0.75);
+            backdrop-filter: blur(16px);
+            padding: 6px 20px;
+            border-radius: 48px;
+            z-index: 20;
+            pointer-events: auto;
+            border: 1px solid rgba(199, 146, 255, 0.4);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+        .info-text {
+            color: #f0f0f0;
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            border-left: 3px solid #c792ff;
+            padding-left: 12px;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .paint-btn, .reset-btn {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(56, 142, 60, 0.9));
+            border: none;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 6px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
+            font-family: inherit;
+            touch-action: manipulation;
+            backdrop-filter: blur(4px);
+        }
+        .reset-btn {
+            background: linear-gradient(135deg, rgba(100, 100, 140, 0.9), rgba(70, 70, 100, 0.9));
+        }
+        .paint-btn:active, .reset-btn:active { transform: scale(0.96); }
+        .paint-btn.active {
+            background: linear-gradient(135deg, #aa66ff, #8844cc);
+            box-shadow: 0 0 12px rgba(170, 102, 255, 0.6);
+        }
+        /* 统计面板 - 左下角 */
+        .stats-panel {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(15, 15, 35, 0.8);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 12px 18px;
+            border-left: 3px solid #c792ff;
+            z-index: 20;
+            pointer-events: none;
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 160px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+        .stats-panel h4 {
+            margin: 0 0 8px 0;
+            color: #c792ff;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        .stats-panel .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            color: #e0e0e0;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        .stats-item span:last-child {
+            font-weight: bold;
+            color: #c792ff;
+            font-size: 13px;
+        }
+        .stats-note {
+            font-size: 9px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 8px;
+            border-top: 1px solid rgba(199, 146, 255, 0.3);
+            padding-top: 6px;
+        }
+        /* 操作提示 - 右下角 */
+        #controls-tip {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            color: #ddd;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 12px;
+            pointer-events: none;
+            font-family: monospace;
+            z-index: 10;
+            border: 1px solid rgba(199,146,255,0.4);
+            font-weight: 500;
+        }
+        /* 状态消息 - 右上角 */
+        .status-msg {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(16px);
+            color: #c792ff;
+            padding: 10px 20px;
+            border-radius: 48px;
+            font-size: 14px;
+            font-family: monospace;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid rgba(199,146,255,0.5);
+            font-weight: 600;
+            max-width: 40%;
+            text-align: right;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        @media (max-width: 768px) {
+            .top-left-panel { top: 12px; left: 12px; gap: 8px; padding: 5px 14px; }
+            .info-text { font-size: 14px; }
+            .paint-btn, .reset-btn { font-size: 11px; padding: 4px 12px; min-width: 60px; }
+            .stats-panel { bottom: 70px; left: 12px; padding: 8px 12px; min-width: 130px; }
+            .stats-item { font-size: 10px; }
+            .stats-panel h4 { font-size: 12px; }
+            #controls-tip { font-size: 9px; bottom: 12px; right: 12px; padding: 5px 12px; }
+            .status-msg { font-size: 11px; top: 12px; right: 12px; padding: 6px 14px; max-width: 55%; }
+        }
+        button { -webkit-tap-highlight-color: rgba(199,146,255,0.3); }
+    </style>
+</head>
+<body>
+    <div class="top-left-panel">
+        <div class="info-text">看看有几个面涂了色</div>
+        <button id="paintToggleBtn" class="paint-btn">🎨 开始涂色</button>
+        <button id="resetPopupBtn" class="reset-btn">↺ 全部还原</button>
+    </div>
+    <!-- 统计面板左下角 -->
+    <div id="statsPanel" class="stats-panel" style="display: none;">
+        <h4>📊 每个方块涂色面统计</h4>
+        <div class="stats-list">
+            <div class="stats-item"><span>0个面:</span><span id="stat0">0</span></div>
+            <div class="stats-item"><span>1个面:</span><span id="stat1">0</span></div>
+            <div class="stats-item"><span>2个面:</span><span id="stat2">0</span></div>
+            <div class="stats-item"><span>3个面:</span><span id="stat3">0</span></div>
+            <div class="stats-item"><span>4个面:</span><span id="stat4">0</span></div>
+            <div class="stats-item"><span>5个面:</span><span id="stat5">0</span></div>
+            <div class="stats-item"><span>6个面:</span><span id="stat6">0</span></div>
+        </div>
+        <div class="stats-note">基于完整立体图形外表面计算</div>
+    </div>
+    <!-- 操作提示右下角 -->
+    <div id="controls-tip">🖐️ 手指旋转/缩放 | 涂色后点任意方块，其他会飞走</div>
+    <!-- 状态消息右上角 -->
+    <div id="statusMsg" class="status-msg">🎨 先点“开始涂色”再玩</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // 主题颜色
+        const theme = {
+            defaultColor: 0x4caf50,
+            paintColor: 0xaa66ff,
+            accent: '#c792ff',
+        };
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a1a);
+        scene.fog = new THREE.FogExp2(0x0a0a1a, 0.012);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(7, 5.5, 9);
+        camera.lookAt(1, 1, 1);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.screenSpacePanning = true;
+        controls.maxPolarAngle = Math.PI;
+        controls.minPolarAngle = 0;
+        controls.target.set(1, 1, 1);
+        controls.touchRotate = true;
+        controls.touchZoom = true;
+        
+        // 辅助装饰
+        const gridHelper = new THREE.GridHelper(12, 20, 0x88aaff, 0x335588);
+        gridHelper.position.y = -0.05;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.25;
+        scene.add(gridHelper);
+        
+        const ringGeometry = new THREE.RingGeometry(2.5, 4.5, 32);
+        const ringMaterial = new THREE.MeshStandardMaterial({ color: 0x5a6ea5, side: THREE.DoubleSide, transparent: true, opacity: 0.15 });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = -0.07;
+        scene.add(ring);
+        
+        // 光照
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.65);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 10, 4);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+        const backLight = new THREE.PointLight(0xcc9966, 0.45);
+        backLight.position.set(-2, 2, -3);
+        scene.add(backLight);
+        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
+        fillLight.position.set(1, -1, 2);
+        scene.add(fillLight);
+        const movingLight = new THREE.PointLight(0xffaa66, 0.4);
+        movingLight.position.set(3, 2, 4);
+        scene.add(movingLight);
+        const centerGlow = new THREE.PointLight(0xaa88ff, 0.3);
+        centerGlow.position.set(1, 0.8, 1);
+        scene.add(centerGlow);
+        
+        const SIZE = 0.98;
+        
+        // 数字表定义的立体图形
+        const heightMap = [
+            { z: 0, heights: [2, 1] },
+            { z: 1, heights: [2, 1, 1] },
+            { z: 2, heights: [1, 1, 1] }
+        ];
+        const cubePositions = [];
+        for (const row of heightMap) {
+            const z = row.z;
+            const heights = row.heights;
+            for (let x = 0; x < heights.length; x++) {
+                const h = heights[x];
+                for (let y = 0; y < h; y++) {
+                    cubePositions.push({ x, y, z });
+                }
+            }
+        }
+        
+        const positionMap = new Map();
+        cubePositions.forEach(pos => positionMap.set(`${pos.x},${pos.y},${pos.z}`, true));
+        
+        function hasNeighbor(pos, dx, dy, dz) {
+            return positionMap.has(`${pos.x + dx},${pos.y + dy},${pos.z + dz}`);
+        }
+        
+        const faceDirections = [
+            { dir: [ 1, 0, 0], index: 0 }, { dir: [-1, 0, 0], index: 1 },
+            { dir: [ 0, 1, 0], index: 2 }, { dir: [ 0,-1, 0], index: 3 },
+            { dir: [ 0, 0, 1], index: 4 }, { dir: [ 0, 0,-1], index: 5 }
+        ];
+        
+        const defaultMaterial = new THREE.MeshStandardMaterial({ color: theme.defaultColor, roughness: 0.25, metalness: 0.7, emissive: 0x001133, emissiveIntensity: 0.12 });
+        const paintedMaterial = new THREE.MeshStandardMaterial({ color: theme.paintColor, roughness: 0.3, metalness: 0.4, emissive: 0x331166, emissiveIntensity: 0.15 });
+        
+        function generateMaterialsForCube(pos, isPaintedMode) {
+            const mats = [defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone()];
+            if (isPaintedMode) {
+                for (const face of faceDirections) {
+                    if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) {
+                        mats[face.index] = paintedMaterial.clone();
+                    }
+                }
+            }
+            return mats;
+        }
+        
+        function computePaintStatistics() {
+            const stats = [0, 0, 0, 0, 0, 0, 0];
+            for (const pos of cubePositions) {
+                let exposedCount = 0;
+                for (const face of faceDirections) {
+                    if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) exposedCount++;
+                }
+                stats[exposedCount]++;
+            }
+            return stats;
+        }
+        
+        function updateStatsUI() {
+            if (!isPainted) {
+                document.getElementById('statsPanel').style.display = 'none';
+                return;
+            }
+            if (isIsolated) {
+                document.getElementById('statsPanel').style.display = 'none';
+                return;
+            }
+            const stats = computePaintStatistics();
+            for (let i = 0; i <= 6; i++) {
+                const span = document.getElementById(`stat${i}`);
+                if (span) span.textContent = stats[i];
+            }
+            document.getElementById('statsPanel').style.display = 'block';
+        }
+        
+        let allCubes = [];
+        let isolatedCube = null;
+        let isolatedOriginalPos = null;
+        let isIsolated = false;
+        let isPainted = false;
+        let currentLabel = null;
+        let animatingCount = 0;
+        
+        function getExposedFaceCount(pos) {
+            let count = 0;
+            for (const face of faceDirections) {
+                if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) count++;
+            }
+            return count;
+        }
+        
+        function updateMaterialsForAll() {
+            if (!isIsolated) {
+                allCubes.forEach(item => {
+                    const newMats = generateMaterialsForCube(item.originalPos, isPainted);
+                    if (item.mesh.material) {
+                        if (Array.isArray(item.mesh.material)) item.mesh.material.forEach(m => m.dispose());
+                        else item.mesh.material.dispose();
+                    }
+                    item.mesh.material = newMats;
+                });
+                updateStatsUI();
+            } else {
+                if (isolatedCube && isolatedOriginalPos) {
+                    const exposed = [];
+                    for (const face of faceDirections) {
+                        if (!hasNeighbor(isolatedOriginalPos, face.dir[0], face.dir[1], face.dir[2])) exposed.push(face.index);
+                    }
+                    const newMats = [];
+                    for (let i = 0; i < 6; i++) {
+                        newMats.push((isPainted && exposed.includes(i)) ? paintedMaterial.clone() : defaultMaterial.clone());
+                    }
+                    if (isolatedCube.material) {
+                        if (Array.isArray(isolatedCube.material)) isolatedCube.material.forEach(m => m.dispose());
+                        else isolatedCube.material.dispose();
+                    }
+                    isolatedCube.material = newMats;
+                    if (currentLabel) {
+                        const exposedCount = getExposedFaceCount(isolatedOriginalPos);
+                        if (isPainted) {
+                            currentLabel.element.textContent = `🎨 涂色面: ${exposedCount}`;
+                            currentLabel.element.style.color = '#c792ff';
+                            currentLabel.element.style.border = '2px solid #c792ff';
+                        } else {
+                            currentLabel.element.textContent = `🔵 未涂色 | 全是蓝色`;
+                            currentLabel.element.style.color = '#88aaff';
+                            currentLabel.element.style.border = '2px solid #88aaff';
+                        }
+                    }
+                }
+                document.getElementById('statsPanel').style.display = 'none';
+            }
+        }
+        
+        function resetWithAnimation() {
+            if (!isIsolated && allCubes.length === cubePositions.length && animatingCount === 0) return;
+            
+            if (isolatedCube) {
+                scene.remove(isolatedCube);
+                if (isolatedCube.material) {
+                    if (Array.isArray(isolatedCube.material)) isolatedCube.material.forEach(m => m.dispose());
+                    else isolatedCube.material.dispose();
+                }
+                isolatedCube = null;
+            }
+            if (currentLabel) {
+                scene.remove(currentLabel);
+                currentLabel = null;
+            }
+            
+            const currentMeshMap = new Map();
+            allCubes.forEach(item => {
+                const key = `${item.originalPos.x},${item.originalPos.y},${item.originalPos.z}`;
+                currentMeshMap.set(key, item);
+            });
+            
+            const newAllCubes = [];
+            for (const pos of cubePositions) {
+                const key = `${pos.x},${pos.y},${pos.z}`;
+                const existingItem = currentMeshMap.get(key);
+                if (existingItem) {
+                    existingItem.mesh.visible = true;
+                    newAllCubes.push(existingItem);
+                } else {
+                    const newMats = generateMaterialsForCube(pos, isPainted);
+                    const boxGeo = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+                    const newCube = new THREE.Mesh(boxGeo, newMats);
+                    newCube.position.set(pos.x, pos.y, pos.z);
+                    newCube.castShadow = true;
+                    newCube.receiveShadow = true;
+                    const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+                    const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xcceeff }));
+                    newCube.add(wireframe);
+                    scene.add(newCube);
+                    newAllCubes.push({
+                        mesh: newCube,
+                        originalPos: { x: pos.x, y: pos.y, z: pos.z },
+                        isAnimating: false
+                    });
+                }
+            }
+            allCubes = newAllCubes;
+            
+            const originalBorders = [];
+            allCubes.forEach(item => {
+                const edges = item.mesh.children.find(child => child.isLineSegments);
+                if (edges && edges.material) {
+                    originalBorders.push({ edges, originalColor: edges.material.color.clone() });
+                    edges.material.color.setHex(0xffaa44);
+                }
+            });
+            
+            let blinkCount = 0;
+            const blinkInterval = setInterval(() => {
+                blinkCount++;
+                allCubes.forEach(item => {
+                    const edges = item.mesh.children.find(child => child.isLineSegments);
+                    if (edges && edges.material) {
+                        edges.material.color.setHex(blinkCount % 2 === 0 ? 0xffaa44 : 0xcceeff);
+                    }
+                });
+                if (blinkCount >= 4) {
+                    clearInterval(blinkInterval);
+                    originalBorders.forEach(({ edges, originalColor }) => {
+                        edges.material.color.copy(originalColor);
+                    });
+                    startResetMovement();
+                }
+            }, 150);
+            
+            function startResetMovement() {
+                let hasAnimation = false;
+                allCubes.forEach(item => {
+                    const targetVec = new THREE.Vector3(item.originalPos.x, item.originalPos.y, item.originalPos.z);
+                    if (!item.mesh.position.equals(targetVec)) {
+                        item.startPos = item.mesh.position.clone();
+                        item.targetPos = targetVec;
+                        item.progress = 0;
+                        item.duration = 0.6;
+                        item.isAnimating = true;
+                        hasAnimation = true;
+                    } else {
+                        item.isAnimating = false;
+                    }
+                });
+                if (hasAnimation) {
+                    animatingCount = allCubes.filter(c => c.isAnimating).length;
+                    isIsolated = false;
+                    isolatedOriginalPos = null;
+                    updateStatusText(true);
+                } else {
+                    isIsolated = false;
+                    isolatedOriginalPos = null;
+                    updateStatusText();
+                    controls.target.set(1, 1, 1);
+                    updateStatsUI();
+                }
+            }
+        }
+        
+        function isolateWithAnimation(posX, posY, posZ) {
+            if (isIsolated || animatingCount > 0 || !isPainted) return;
+            
+            const targetPos = { x: posX, y: posY, z: posZ };
+            const targetIndex = allCubes.findIndex(item => item.originalPos.x === targetPos.x && item.originalPos.y === targetPos.y && item.originalPos.z === targetPos.z);
+            if (targetIndex === -1) return;
+            
+            const targetItem = allCubes[targetIndex];
+            const exposedCount = getExposedFaceCount(targetPos);
+            
+            const isolatedMaterials = [];
+            for (let i = 0; i < 6; i++) {
+                const isExposed = (() => {
+                    for (const face of faceDirections) {
+                        if (face.index === i && !hasNeighbor(targetPos, face.dir[0], face.dir[1], face.dir[2])) return true;
+                    }
+                    return false;
+                })();
+                isolatedMaterials.push((isPainted && isExposed) ? paintedMaterial.clone() : defaultMaterial.clone());
+            }
+            const boxGeo = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+            const newIsolatedMesh = new THREE.Mesh(boxGeo, isolatedMaterials);
+            newIsolatedMesh.position.copy(targetItem.mesh.position);
+            newIsolatedMesh.castShadow = true;
+            newIsolatedMesh.receiveShadow = true;
+            const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+            const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xffaa66 }));
+            newIsolatedMesh.add(wireframe);
+            scene.add(newIsolatedMesh);
+            
+            const div = document.createElement('div');
+            if (isPainted) {
+                div.textContent = `🎨 涂色面: ${exposedCount}`;
+                div.style.color = '#c792ff';
+                div.style.border = '2px solid #c792ff';
+            } else {
+                div.textContent = `🔵 未涂色 | 全是蓝色`;
+                div.style.color = '#88aaff';
+                div.style.border = '2px solid #88aaff';
+            }
+            div.style.cssText += 'font-size:18px;font-weight:bold;background:rgba(0,0,0,0.8);padding:6px 16px;border-radius:40px;font-family:monospace;white-space:nowrap;backdrop-filter:blur(8px);';
+            const label = new CSS2DObject(div);
+            label.position.set(targetPos.x, targetPos.y + 1.2, targetPos.z);
+            scene.add(label);
+            
+            scene.remove(targetItem.mesh);
+            if (targetItem.mesh.material) {
+                if (Array.isArray(targetItem.mesh.material)) targetItem.mesh.material.forEach(m => m.dispose());
+                else targetItem.mesh.material.dispose();
+            }
+            
+            const otherCubes = allCubes.filter((_, idx) => idx !== targetIndex);
+            const center = new THREE.Vector3(1, 1, 1);
+            otherCubes.forEach(item => {
+                const dir = new THREE.Vector3(
+                    item.mesh.position.x - center.x,
+                    item.mesh.position.y - center.y + 0.5,
+                    item.mesh.position.z - center.z
+                ).normalize();
+                const distance = 20;
+                const targetVec = center.clone().add(dir.multiplyScalar(distance));
+                targetVec.y += (Math.random() - 0.5) * 4;
+                item.startPos = item.mesh.position.clone();
+                item.targetPos = targetVec;
+                item.progress = 0;
+                item.duration = 0.55;
+                item.isAnimating = true;
+            });
+            
+            isolatedCube = newIsolatedMesh;
+            isolatedOriginalPos = targetPos;
+            currentLabel = label;
+            isIsolated = true;
+            allCubes = otherCubes;
+            animatingCount = otherCubes.length;
+            controls.target.set(targetPos.x, targetPos.y + 0.5, targetPos.z);
+            updateStatusText(true);
+            document.getElementById('statsPanel').style.display = 'none';
+        }
+        
+        function updateStatusText(isAnimating = false) {
+            const statusDiv = document.getElementById('statusMsg');
+            if (isAnimating) {
+                statusDiv.innerHTML = '✨ 飞走啦... 等一下下 ✨';
+                statusDiv.style.color = '#aaffaa';
+                return;
+            }
+            if (!isPainted) {
+                statusDiv.innerHTML = '🎨 先点“开始涂色”再玩';
+                statusDiv.style.color = theme.accent;
+                return;
+            }
+            if (isIsolated && isolatedCube && isolatedOriginalPos) {
+                const exposedCount = getExposedFaceCount(isolatedOriginalPos);
+                statusDiv.innerHTML = `✨ 这个方块有 ${exposedCount} 个面被涂色，转着看吧 ✨`;
+                statusDiv.style.color = theme.accent;
+            } else {
+                statusDiv.innerHTML = '🎨 点一下方块，其他的就飞走啦';
+                statusDiv.style.color = theme.accent;
+            }
+        }
+        
+        function setPaintMode(active) {
+            isPainted = active;
+            updateMaterialsForAll();
+            const paintBtn = document.getElementById('paintToggleBtn');
+            if (isPainted) {
+                paintBtn.classList.add('active');
+                paintBtn.innerHTML = '✨ 清除颜色';
+                if (!isIsolated) updateStatsUI();
+            } else {
+                paintBtn.classList.remove('active');
+                paintBtn.innerHTML = '🎨 开始涂色';
+                document.getElementById('statsPanel').style.display = 'none';
+                if (isIsolated) resetWithAnimation();
+            }
+            updateStatusText();
+        }
+        
+        function initFullGroup() {
+            const boxGeometry = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+            for (const pos of cubePositions) {
+                const mats = generateMaterialsForCube(pos, false);
+                const cube = new THREE.Mesh(boxGeometry, mats);
+                cube.position.set(pos.x, pos.y, pos.z);
+                cube.castShadow = true;
+                cube.receiveShadow = true;
+                const edgesGeo = new THREE.EdgesGeometry(boxGeometry);
+                const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xcceeff }));
+                cube.add(wireframe);
+                scene.add(cube);
+                allCubes.push({
+                    mesh: cube,
+                    originalPos: { x: pos.x, y: pos.y, z: pos.z },
+                    isAnimating: false
+                });
+            }
+        }
+        
+        function updateAnimations(deltaTime) {
+            if (animatingCount === 0) return;
+            let anyActive = false;
+            const step = Math.min(deltaTime, 0.033);
+            for (const item of allCubes) {
+                if (item.isAnimating) {
+                    item.progress += step / item.duration;
+                    if (item.progress >= 1) {
+                        item.mesh.position.copy(item.targetPos);
+                        item.isAnimating = false;
+                        animatingCount--;
+                        if (isIsolated) item.mesh.visible = false;
+                    } else {
+                        const t = item.progress;
+                        item.mesh.position.lerpVectors(item.startPos, item.targetPos, t);
+                        anyActive = true;
+                    }
+                }
+            }
+            if (animatingCount === 0 && !anyActive) {
+                if (isIsolated) updateStatusText();
+                else {
+                    updateStatusText();
+                    controls.target.set(1, 1, 1);
+                    if (isPainted) updateStatsUI();
+                }
+            } else if (anyActive) updateStatusText(true);
+        }
+        
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        function onCanvasClick(event) {
+            if (!isPainted || isIsolated || animatingCount > 0) return;
+            let clientX, clientY;
+            if (event.touches) {
+                if (event.touches.length === 0) return;
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+                event.preventDefault();
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const clickableMeshes = allCubes.map(item => item.mesh);
+            const intersects = raycaster.intersectObjects(clickableMeshes);
+            if (intersects.length > 0) {
+                const hitMesh = intersects[0].object;
+                const hitItem = allCubes.find(item => item.mesh === hitMesh);
+                if (hitItem) {
+                    const pos = hitItem.originalPos;
+                    isolateWithAnimation(pos.x, pos.y, pos.z);
+                }
+            }
+        }
+        
+        initFullGroup();
+        
+        const groundPlaneMat = new THREE.MeshStandardMaterial({ color: 0x2266aa, roughness: 0.5, metalness: 0.1, transparent: true, opacity: 0.15 });
+        const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.5), groundPlaneMat);
+        groundPlane.rotation.x = -Math.PI / 2;
+        groundPlane.position.y = -0.08;
+        groundPlane.receiveShadow = true;
+        scene.add(groundPlane);
+        
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 1200;
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i*3] = (Math.random() - 0.5) * 200;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 80 + 5;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 100 - 50;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xaaccff, size: 0.07, transparent: true, opacity: 0.5 }));
+        scene.add(stars);
+        
+        const dustGeo = new THREE.BufferGeometry();
+        const dustCount = 500;
+        const dustPositions = new Float32Array(dustCount * 3);
+        for (let i = 0; i < dustCount; i++) {
+            dustPositions[i*3] = (Math.random() - 0.5) * 5 + 1;
+            dustPositions[i*3+1] = (Math.random() - 0.5) * 3 + 1;
+            dustPositions[i*3+2] = (Math.random() - 0.5) * 5 + 1;
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+        const dustParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x88aaff, size: 0.03, transparent: true, opacity: 0.3 }));
+        scene.add(dustParticles);
+        
+        let lastTime = performance.now();
+        function animate() {
+            const now = performance.now();
+            let delta = Math.min(0.033, (now - lastTime) / 1000);
+            lastTime = now;
+            updateAnimations(delta);
+            const time = now * 0.001;
+            movingLight.position.x = 3.5 + Math.sin(time) * 1.2;
+            movingLight.position.z = 3.5 + Math.cos(time * 0.9) * 1.5;
+            movingLight.intensity = 0.45 + Math.sin(time * 1.5) * 0.1;
+            centerGlow.intensity = 0.3 + Math.sin(time * 1.2) * 0.1;
+            stars.rotation.y += 0.0005;
+            stars.rotation.x += 0.0003;
+            dustParticles.rotation.y += 0.002;
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        renderer.domElement.addEventListener('click', onCanvasClick);
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) setTimeout(() => onCanvasClick(e), 10);
+        });
+        
+        document.getElementById('paintToggleBtn').addEventListener('click', () => setPaintMode(!isPainted));
+        document.getElementById('resetPopupBtn').addEventListener('click', () => resetWithAnimation());
+    </script>
+</body>
+</html>
