@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>六下小自主P104T11</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', 'Segoe UI', 'Roboto', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            touch-action: none;
+        }
+        /* 左上角面板：主按钮区域 */
+        .top-left-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 50px;
+            z-index: 20;
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+        }
+        .info-text {
+            color: white;
+            font-size: 18px;    /* 稍微放大 */
+            font-weight: 500;
+            border-left: 3px solid #ff9800;
+            padding-left: 12px;
+            pointer-events: none;
+        }
+        .paint-btn, .reset-btn {
+            background: linear-gradient(135deg, #ff7e5e, #feb47b);
+            border: none;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+            font-family: inherit;
+            touch-action: manipulation;
+            min-width: 80px;
+        }
+        .paint-btn:active, .reset-btn:active { transform: scale(0.96); }
+        .paint-btn.active {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            box-shadow: 0 0 12px rgba(76,175,80,0.6);
+        }
+        .reset-btn {
+            background: linear-gradient(135deg, #3a6ea5, #2c5282);
+            margin-left: 5px;
+        }
+        /* 统计面板：位于主面板下方 */
+        .stats-panel {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            padding: 12px 18px;
+            border-left: 4px solid #ff9800;
+            z-index: 20;
+            pointer-events: none;
+            font-family: monospace;
+            min-width: 160px;
+            transition: all 0.2s ease;
+        }
+        .stats-panel h4 {
+            margin: 0 0 8px 0;
+            color: #ffaa66;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .stats-panel .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            color: #ddd;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+        .stats-item span:first-child {
+            font-weight: normal;
+        }
+        .stats-item span:last-child {
+            font-weight: bold;
+            color: #ffaa66;
+        }
+        .stats-note {
+            font-size: 10px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 6px;
+        }
+        #controls-tip {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            color: #ddd;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            pointer-events: none;
+            font-family: monospace;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .status-msg {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #ffaa66;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-family: monospace;
+            pointer-events: none;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            border-right: 3px solid #ffaa66;
+            font-weight: bold;
+            max-width: 55%;
+            text-align: right;
+        }
+        @media (max-width: 768px) {
+            .top-left-panel { gap: 10px; padding: 6px 15px; top: 12px; left: 12px; }
+            .info-text { font-size: 16px; }  /* 移动端也适当放大 */
+            .paint-btn, .reset-btn { font-size: 13px; padding: 6px 14px; min-width: 70px; }
+            .stats-panel { top: 75px; left: 12px; padding: 8px 12px; min-width: 130px; }
+            .stats-item { font-size: 11px; }
+            .stats-panel h4 { font-size: 12px; }
+            #controls-tip { font-size: 10px; bottom: 12px; left: 12px; }
+            .status-msg { font-size: 10px; bottom: 12px; right: 12px; padding: 5px 12px; }
+        }
+        button { -webkit-tap-highlight-color: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <div class="top-left-panel">
+        <div class="info-text">求涂色面数</div>
+        <button id="paintToggleBtn" class="paint-btn">🎨 涂色</button>
+        <button id="resetPopupBtn" class="reset-btn">↺ 复位</button>
+    </div>
+    <!-- 统计面板，初始隐藏 -->
+    <div id="statsPanel" class="stats-panel" style="display: none;">
+        <h4>📊 涂色面数统计</h4>
+        <div class="stats-list">
+            <div class="stats-item"><span>0面涂色:</span><span id="stat0">0</span></div>
+            <div class="stats-item"><span>1面涂色:</span><span id="stat1">0</span></div>
+            <div class="stats-item"><span>2面涂色:</span><span id="stat2">0</span></div>
+            <div class="stats-item"><span>3面涂色:</span><span id="stat3">0</span></div>
+            <div class="stats-item"><span>4面涂色:</span><span id="stat4">0</span></div>
+            <div class="stats-item"><span>5面涂色:</span><span id="stat5">0</span></div>
+            <div class="stats-item"><span>6面涂色:</span><span id="stat6">0</span></div>
+        </div>
+        <div class="stats-note">基于完整立体图形外表面计算</div>
+    </div>
+    <div id="controls-tip">🖐️ 单指旋转 | 双指缩放 | 未涂色时点击无效 | 涂色后点击方块孤立观察</div>
+    <div id="statusMsg" class="status-msg">🎨点击涂色再观察</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景、相机、渲染器 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111122);
+        scene.fog = new THREE.FogExp2(0x111122, 0.008);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(8, 6, 10);
+        camera.lookAt(2, 1.2, 1.8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 控制器: 触屏360度无死角 ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.screenSpacePanning = true;
+        controls.maxPolarAngle = Math.PI;
+        controls.minPolarAngle = 0;
+        controls.target.set(2, 1.2, 1.8);
+        controls.touchRotate = true;
+        controls.touchZoom = true;
+        
+        // --- 辅助元素 ---
+        const gridHelper = new THREE.GridHelper(15, 20, 0x88aaff, 0x335588);
+        gridHelper.position.y = -0.01;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.35;
+        scene.add(gridHelper);
+        
+        const ringGeometry = new THREE.RingGeometry(3.5, 5.5, 32);
+        const ringMaterial = new THREE.MeshStandardMaterial({ color: 0x3a6ea5, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = -0.02;
+        scene.add(ring);
+        
+        // --- 光照 ---
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.65);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 10, 4);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+        const backLight = new THREE.PointLight(0xcc9966, 0.45);
+        backLight.position.set(-2, 2, -3);
+        scene.add(backLight);
+        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
+        fillLight.position.set(1, -1, 2);
+        scene.add(fillLight);
+        const movingLight = new THREE.PointLight(0xffaa66, 0.4);
+        movingLight.position.set(3, 2, 4);
+        scene.add(movingLight);
+        const centerGlow = new THREE.PointLight(0x4488ff, 0.25);
+        centerGlow.position.set(1.5, 0.8, 1.2);
+        scene.add(centerGlow);
+        
+        // --- 几何参数 ---
+        const SIZE = 0.98;
+        
+        // 所有立方体的原始位置
+        const cubePositions = [];
+        for (let x = 0; x < 3; x++) for (let z = 0; z < 2; z++) cubePositions.push({ x, y: 0, z });
+        for (let x = 0; x < 3; x++) cubePositions.push({ x, y: 1, z: 0 });
+        for (let x = 1; x <= 2; x++) cubePositions.push({ x, y: 1, z: 1 });
+        
+        const positionMap = new Map();
+        cubePositions.forEach(pos => positionMap.set(`${pos.x},${pos.y},${pos.z}`, true));
+        
+        function hasNeighbor(pos, dx, dy, dz) {
+            return positionMap.has(`${pos.x + dx},${pos.y + dy},${pos.z + dz}`);
+        }
+        
+        const faceDirections = [
+            { dir: [ 1, 0, 0], index: 0 }, { dir: [-1, 0, 0], index: 1 },
+            { dir: [ 0, 1, 0], index: 2 }, { dir: [ 0,-1, 0], index: 3 },
+            { dir: [ 0, 0, 1], index: 4 }, { dir: [ 0, 0,-1], index: 5 }
+        ];
+        
+        const defaultMaterial = new THREE.MeshStandardMaterial({ color: 0x5a9eff, roughness: 0.25, metalness: 0.7, emissive: 0x001133, emissiveIntensity: 0.12 });
+        const paintedMaterial = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3, metalness: 0.4, emissive: 0x441111, emissiveIntensity: 0.15 });
+        
+        function generateMaterialsForCube(pos, isPaintedMode) {
+            const mats = [defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone(), defaultMaterial.clone()];
+            if (isPaintedMode) {
+                for (const face of faceDirections) {
+                    if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) {
+                        mats[face.index] = paintedMaterial.clone();
+                    }
+                }
+            }
+            return mats;
+        }
+        
+        // --- 统计功能: 计算每个立方体的外表面数（即涂色面数）---
+        function computePaintStatistics() {
+            const stats = [0, 0, 0, 0, 0, 0, 0]; // 索引0~6
+            for (const pos of cubePositions) {
+                let exposedCount = 0;
+                for (const face of faceDirections) {
+                    if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) {
+                        exposedCount++;
+                    }
+                }
+                stats[exposedCount]++;
+            }
+            return stats;
+        }
+        
+        function updateStatsUI() {
+            if (!isPainted) {
+                document.getElementById('statsPanel').style.display = 'none';
+                return;
+            }
+            // 仅在完整组合模式（非孤立）时显示统计，孤立模式下隐藏
+            if (isIsolated) {
+                document.getElementById('statsPanel').style.display = 'none';
+                return;
+            }
+            const stats = computePaintStatistics();
+            for (let i = 0; i <= 6; i++) {
+                const span = document.getElementById(`stat${i}`);
+                if (span) span.textContent = stats[i];
+            }
+            document.getElementById('statsPanel').style.display = 'block';
+        }
+        
+        // --- 全局状态 ---
+        let allCubes = [];          // 存储所有立方体对象 { mesh, originalPos, isAnimating, startPos, targetPos, progress, duration }
+        let isolatedCube = null;
+        let isolatedOriginalPos = null;
+        let isIsolated = false;
+        let isPainted = false;
+        let currentLabel = null;
+        let animatingCount = 0;
+        
+        // 获取孤立方体的暴露面数量
+        function getExposedFaceCount(pos) {
+            let count = 0;
+            for (const face of faceDirections) {
+                if (!hasNeighbor(pos, face.dir[0], face.dir[1], face.dir[2])) count++;
+            }
+            return count;
+        }
+        
+        // 更新材质 + 刷新统计UI
+        function updateMaterialsForAll() {
+            if (!isIsolated) {
+                allCubes.forEach(item => {
+                    const newMats = generateMaterialsForCube(item.originalPos, isPainted);
+                    if (item.mesh.material) {
+                        if (Array.isArray(item.mesh.material)) item.mesh.material.forEach(m => m.dispose());
+                        else item.mesh.material.dispose();
+                    }
+                    item.mesh.material = newMats;
+                });
+                updateStatsUI(); // 涂色状态改变时更新统计显示
+            } else {
+                if (isolatedCube && isolatedOriginalPos) {
+                    const exposed = [];
+                    for (const face of faceDirections) {
+                        if (!hasNeighbor(isolatedOriginalPos, face.dir[0], face.dir[1], face.dir[2])) exposed.push(face.index);
+                    }
+                    const newMats = [];
+                    for (let i = 0; i < 6; i++) {
+                        newMats.push((isPainted && exposed.includes(i)) ? paintedMaterial.clone() : defaultMaterial.clone());
+                    }
+                    if (isolatedCube.material) {
+                        if (Array.isArray(isolatedCube.material)) isolatedCube.material.forEach(m => m.dispose());
+                        else isolatedCube.material.dispose();
+                    }
+                    isolatedCube.material = newMats;
+                    if (currentLabel) {
+                        const exposedCount = getExposedFaceCount(isolatedOriginalPos);
+                        if (isPainted) {
+                            currentLabel.element.textContent = `🎨 涂色面: ${exposedCount}`;
+                            currentLabel.element.style.color = '#ffaa66';
+                            currentLabel.element.style.border = '2px solid #ffaa66';
+                        } else {
+                            currentLabel.element.textContent = `🔵 未涂色 | 外表面均为蓝色`;
+                            currentLabel.element.style.color = '#88aaff';
+                            currentLabel.element.style.border = '2px solid #88aaff';
+                        }
+                    }
+                }
+                // 孤立模式下统计面板隐藏
+                document.getElementById('statsPanel').style.display = 'none';
+            }
+        }
+        
+        // 复位: 高亮闪烁后移回
+        function resetWithAnimation() {
+            if (!isIsolated && allCubes.length === cubePositions.length && animatingCount === 0) return;
+            
+            // 1. 移除孤立方体
+            if (isolatedCube) {
+                scene.remove(isolatedCube);
+                if (isolatedCube.material) {
+                    if (Array.isArray(isolatedCube.material)) isolatedCube.material.forEach(m => m.dispose());
+                    else isolatedCube.material.dispose();
+                }
+                isolatedCube = null;
+            }
+            if (currentLabel) {
+                scene.remove(currentLabel);
+                currentLabel = null;
+            }
+            
+            // 2. 确保所有原始位置的立方体都存在且可见
+            const currentMeshMap = new Map();
+            allCubes.forEach(item => {
+                const key = `${item.originalPos.x},${item.originalPos.y},${item.originalPos.z}`;
+                currentMeshMap.set(key, item);
+            });
+            
+            const newAllCubes = [];
+            const targetPositions = [...cubePositions];
+            
+            for (const pos of targetPositions) {
+                const key = `${pos.x},${pos.y},${pos.z}`;
+                const existingItem = currentMeshMap.get(key);
+                if (existingItem) {
+                    existingItem.mesh.visible = true;
+                    newAllCubes.push(existingItem);
+                } else {
+                    const newMats = generateMaterialsForCube(pos, isPainted);
+                    const boxGeo = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+                    const newCube = new THREE.Mesh(boxGeo, newMats);
+                    newCube.position.set(pos.x, pos.y, pos.z);
+                    newCube.castShadow = true;
+                    newCube.receiveShadow = true;
+                    const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+                    const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xcceeff }));
+                    newCube.add(wireframe);
+                    scene.add(newCube);
+                    const newItem = {
+                        mesh: newCube,
+                        originalPos: { x: pos.x, y: pos.y, z: pos.z },
+                        isAnimating: false
+                    };
+                    newAllCubes.push(newItem);
+                }
+            }
+            
+            allCubes = newAllCubes;
+            
+            // 高亮闪烁效果
+            const originalBorders = [];
+            allCubes.forEach(item => {
+                const edges = item.mesh.children.find(child => child.isLineSegments);
+                if (edges && edges.material) {
+                    originalBorders.push({ edges, originalColor: edges.material.color.clone() });
+                    edges.material.color.setHex(0xffaa44);
+                }
+            });
+            
+            let blinkCount = 0;
+            const blinkInterval = setInterval(() => {
+                blinkCount++;
+                allCubes.forEach(item => {
+                    const edges = item.mesh.children.find(child => child.isLineSegments);
+                    if (edges && edges.material) {
+                        if (blinkCount % 2 === 0) {
+                            edges.material.color.setHex(0xffaa44);
+                        } else {
+                            edges.material.color.setHex(0xcceeff);
+                        }
+                    }
+                });
+                if (blinkCount >= 4) {
+                    clearInterval(blinkInterval);
+                    originalBorders.forEach(({ edges, originalColor }) => {
+                        edges.material.color.copy(originalColor);
+                    });
+                    startResetMovement();
+                }
+            }, 150);
+            
+            function startResetMovement() {
+                let hasAnimation = false;
+                allCubes.forEach(item => {
+                    const targetVec = new THREE.Vector3(item.originalPos.x, item.originalPos.y, item.originalPos.z);
+                    if (!item.mesh.position.equals(targetVec)) {
+                        item.startPos = item.mesh.position.clone();
+                        item.targetPos = targetVec;
+                        item.progress = 0;
+                        item.duration = 0.6;
+                        item.isAnimating = true;
+                        hasAnimation = true;
+                    } else {
+                        item.isAnimating = false;
+                    }
+                });
+                
+                if (hasAnimation) {
+                    animatingCount = allCubes.filter(c => c.isAnimating).length;
+                    isIsolated = false;
+                    isolatedOriginalPos = null;
+                    updateStatusText(true);
+                } else {
+                    isIsolated = false;
+                    isolatedOriginalPos = null;
+                    updateStatusText();
+                    controls.target.set(2, 1.2, 1.8);
+                    updateStatsUI(); // 复位后更新统计
+                }
+            }
+        }
+        
+        // 孤立显示: 涂色模式下点击方块，其他方块飞出并隐藏
+        function isolateWithAnimation(posX, posY, posZ) {
+            if (isIsolated) return;
+            if (animatingCount > 0) return;
+            if (!isPainted) return;
+            
+            const targetPos = { x: posX, y: posY, z: posZ };
+            const targetIndex = allCubes.findIndex(item => item.originalPos.x === targetPos.x && item.originalPos.y === targetPos.y && item.originalPos.z === targetPos.z);
+            if (targetIndex === -1) return;
+            
+            const targetItem = allCubes[targetIndex];
+            const exposedCount = getExposedFaceCount(targetPos);
+            
+            // 创建孤立方体
+            const isolatedMaterials = [];
+            for (let i = 0; i < 6; i++) {
+                const isExposed = (() => {
+                    for (const face of faceDirections) {
+                        if (face.index === i && !hasNeighbor(targetPos, face.dir[0], face.dir[1], face.dir[2])) return true;
+                    }
+                    return false;
+                })();
+                if (isPainted && isExposed) {
+                    isolatedMaterials.push(paintedMaterial.clone());
+                } else {
+                    isolatedMaterials.push(defaultMaterial.clone());
+                }
+            }
+            const boxGeo = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+            const newIsolatedMesh = new THREE.Mesh(boxGeo, isolatedMaterials);
+            newIsolatedMesh.position.copy(targetItem.mesh.position);
+            newIsolatedMesh.castShadow = true;
+            newIsolatedMesh.receiveShadow = true;
+            const edgesGeo = new THREE.EdgesGeometry(boxGeo);
+            const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xffaa66 }));
+            newIsolatedMesh.add(wireframe);
+            scene.add(newIsolatedMesh);
+            
+            // 标签
+            const div = document.createElement('div');
+            if (isPainted) {
+                div.textContent = `🎨 涂色面: ${exposedCount}`;
+                div.style.color = '#ffaa66';
+                div.style.border = '2px solid #ffaa66';
+            } else {
+                div.textContent = `🔵 未涂色 | 外表面均为蓝色`;
+                div.style.color = '#88aaff';
+                div.style.border = '2px solid #88aaff';
+            }
+            div.style.cssText += 'font-size:18px;font-weight:bold;background:rgba(0,0,0,0.8);padding:6px 16px;border-radius:40px;font-family:monospace;white-space:nowrap;backdrop-filter:blur(8px);';
+            const label = new CSS2DObject(div);
+            label.position.set(targetPos.x, targetPos.y + 1.2, targetPos.z);
+            scene.add(label);
+            
+            // 移除原立方体
+            scene.remove(targetItem.mesh);
+            if (targetItem.mesh.material) {
+                if (Array.isArray(targetItem.mesh.material)) targetItem.mesh.material.forEach(m => m.dispose());
+                else targetItem.mesh.material.dispose();
+            }
+            
+            // 其他立方体飞出并隐藏
+            const otherCubes = allCubes.filter((_, idx) => idx !== targetIndex);
+            const center = new THREE.Vector3(2, 1.2, 1.8);
+            
+            otherCubes.forEach(item => {
+                const dir = new THREE.Vector3(
+                    item.mesh.position.x - center.x,
+                    item.mesh.position.y - center.y + 0.5,
+                    item.mesh.position.z - center.z
+                ).normalize();
+                const distance = 25;
+                const targetVec = center.clone().add(dir.multiplyScalar(distance));
+                targetVec.y += (Math.random() - 0.5) * 5;
+                
+                item.startPos = item.mesh.position.clone();
+                item.targetPos = targetVec;
+                item.progress = 0;
+                item.duration = 0.55;
+                item.isAnimating = true;
+            });
+            
+            isolatedCube = newIsolatedMesh;
+            isolatedOriginalPos = targetPos;
+            currentLabel = label;
+            isIsolated = true;
+            allCubes = otherCubes;
+            animatingCount = otherCubes.length;
+            
+            controls.target.set(targetPos.x, targetPos.y + 0.5, targetPos.z);
+            updateStatusText(true);
+            // 孤立模式下隐藏统计面板
+            document.getElementById('statsPanel').style.display = 'none';
+        }
+        
+        function updateStatusText(isAnimating = false) {
+            const statusDiv = document.getElementById('statusMsg');
+            if (isAnimating) {
+                statusDiv.innerHTML = '✨ 动画移动中... 请稍后 ✨';
+                statusDiv.style.color = '#88ffaa';
+                return;
+            }
+            if (!isPainted) {
+                statusDiv.innerHTML = '🎨点击涂色再观察';
+                statusDiv.style.color = '#ffaa66';
+                return;
+            }
+            if (isIsolated && isolatedCube && isolatedOriginalPos) {
+                const exposedCount = getExposedFaceCount(isolatedOriginalPos);
+                statusDiv.innerHTML = `🔍该方块有 ${exposedCount} 个外表面被涂红 | 可旋转观察`;
+                statusDiv.style.color = '#ffaa88';
+            } else {
+                statusDiv.innerHTML = '🎨点击观察';
+                statusDiv.style.color = '#ffaa66';
+            }
+        }
+        
+        // 涂色切换
+        function setPaintMode(active) {
+            isPainted = active;
+            updateMaterialsForAll();
+            const paintBtn = document.getElementById('paintToggleBtn');
+            if (isPainted) {
+                paintBtn.classList.add('active');
+                paintBtn.innerHTML = '✨ 取消涂色';
+                // 显示统计面板（如果当前不在孤立模式）
+                if (!isIsolated) {
+                    updateStatsUI();
+                }
+            } else {
+                paintBtn.classList.remove('active');
+                paintBtn.innerHTML = '🎨 涂色';
+                document.getElementById('statsPanel').style.display = 'none';
+                // 如果当前处于孤立模式，复位
+                if (isIsolated) {
+                    resetWithAnimation();
+                }
+            }
+            updateStatusText();
+        }
+        
+        // 初始化完整组合
+        function initFullGroup() {
+            const boxGeometry = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
+            cubePositions.forEach(pos => {
+                const mats = generateMaterialsForCube(pos, false);
+                const cube = new THREE.Mesh(boxGeometry, mats);
+                cube.position.set(pos.x, pos.y, pos.z);
+                cube.castShadow = true;
+                cube.receiveShadow = true;
+                const edgesGeo = new THREE.EdgesGeometry(boxGeometry);
+                const wireframe = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0xcceeff }));
+                cube.add(wireframe);
+                scene.add(cube);
+                allCubes.push({
+                    mesh: cube,
+                    originalPos: { x: pos.x, y: pos.y, z: pos.z },
+                    isAnimating: false
+                });
+            });
+        }
+        
+        // 动画更新
+        function updateAnimations(deltaTime) {
+            if (animatingCount === 0) return;
+            
+            let anyActive = false;
+            const step = Math.min(deltaTime, 0.033);
+            
+            for (const item of allCubes) {
+                if (item.isAnimating) {
+                    item.progress += step / item.duration;
+                    if (item.progress >= 1) {
+                        item.mesh.position.copy(item.targetPos);
+                        item.isAnimating = false;
+                        animatingCount--;
+                        if (isIsolated) {
+                            item.mesh.visible = false;
+                        }
+                    } else {
+                        const t = item.progress;
+                        item.mesh.position.lerpVectors(item.startPos, item.targetPos, t);
+                        anyActive = true;
+                    }
+                }
+            }
+            
+            if (animatingCount === 0 && !anyActive) {
+                if (isIsolated) {
+                    updateStatusText();
+                } else {
+                    updateStatusText();
+                    controls.target.set(2, 1.2, 1.8);
+                    // 复位完成时如果涂色模式开启，刷新统计
+                    if (isPainted) updateStatsUI();
+                }
+            } else if (anyActive) {
+                updateStatusText(true);
+            }
+        }
+        
+        // 射线交互
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        function onCanvasClick(event) {
+            if (!isPainted) return;
+            if (isIsolated) return;
+            if (animatingCount > 0) return;
+            
+            let clientX, clientY;
+            if (event.touches) {
+                if (event.touches.length === 0) return;
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+                event.preventDefault();
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const clickableMeshes = allCubes.map(item => item.mesh);
+            const intersects = raycaster.intersectObjects(clickableMeshes);
+            
+            if (intersects.length > 0) {
+                const hitMesh = intersects[0].object;
+                const hitItem = allCubes.find(item => item.mesh === hitMesh);
+                if (hitItem) {
+                    const pos = hitItem.originalPos;
+                    isolateWithAnimation(pos.x, pos.y, pos.z);
+                }
+            }
+        }
+        
+        // 启动
+        initFullGroup();
+        
+        // 地面装饰
+        const groundPlaneMat = new THREE.MeshStandardMaterial({ color: 0x2266aa, roughness: 0.5, metalness: 0.1, transparent: true, opacity: 0.2 });
+        const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), groundPlaneMat);
+        groundPlane.rotation.x = -Math.PI / 2;
+        groundPlane.position.y = -0.05;
+        groundPlane.receiveShadow = true;
+        scene.add(groundPlane);
+        
+        // 粒子效果
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 800;
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i*3] = (Math.random() - 0.5) * 200;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 80 + 5;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 100 - 50;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xaaccff, size: 0.08, transparent: true, opacity: 0.6 }));
+        scene.add(stars);
+        
+        const dustGeo = new THREE.BufferGeometry();
+        const dustCount = 400;
+        const dustPositions = new Float32Array(dustCount * 3);
+        for (let i = 0; i < dustCount; i++) {
+            dustPositions[i*3] = (Math.random() - 0.5) * 6 + 1.5;
+            dustPositions[i*3+1] = (Math.random() - 0.5) * 3 + 1.2;
+            dustPositions[i*3+2] = (Math.random() - 0.5) * 5 + 1.5;
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+        const dustParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x88bbff, size: 0.03, transparent: true, opacity: 0.4 }));
+        scene.add(dustParticles);
+        
+        // 动画循环
+        let lastTime = performance.now();
+        function animate() {
+            const now = performance.now();
+            let delta = Math.min(0.033, (now - lastTime) / 1000);
+            lastTime = now;
+            
+            updateAnimations(delta);
+            
+            const time = now * 0.001;
+            movingLight.position.x = 3.5 + Math.sin(time) * 1.2;
+            movingLight.position.z = 3.5 + Math.cos(time * 0.9) * 1.5;
+            movingLight.intensity = 0.45 + Math.sin(time * 1.5) * 0.1;
+            centerGlow.intensity = 0.25 + Math.sin(time * 1.2) * 0.08;
+            stars.rotation.y += 0.0005;
+            stars.rotation.x += 0.0003;
+            dustParticles.rotation.y += 0.002;
+            
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        lastTime = performance.now();
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        renderer.domElement.addEventListener('click', onCanvasClick);
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) setTimeout(() => onCanvasClick(e), 10);
+        });
+        
+        document.getElementById('paintToggleBtn').addEventListener('click', () => setPaintMode(!isPainted));
+        document.getElementById('resetPopupBtn').addEventListener('click', () => resetWithAnimation());
+        
+        console.log("文字已按要求修改：左上角显示'求涂色面数'，标题为'六下小自主P104T11'，字体放大至18px");
+    </script>
+</body>
+</html>
