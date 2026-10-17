@@ -1,0 +1,2588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>扫雷 · 普通 / 多雷 / 正负 / 复</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; padding: 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% -10%, #2c3e5e 0%, #141a26 55%, #0b0e14 100%);
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #e6ebf5; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent; overflow: hidden;
+  }
+  .app {
+    display: flex; gap: 14px; align-items: flex-start; justify-content: center;
+    max-width: 100%; max-height: 100%;
+  }
+  .panel {
+    padding: 14px; border-radius: 20px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .game-panel {
+    width: fit-content; max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px); overflow-y: auto;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .stat {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 8px;
+    min-width: 84px; max-width: 260px;
+    padding: 7px 11px; border-radius: 12px;
+    background: rgba(0, 0, 0, 0.32);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+    font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: 17px; letter-spacing: 1px; color: #ffd166; line-height: 1.2;
+  }
+  .stat-item {
+    display: inline-flex; align-items: baseline; gap: 3px;
+    font-size: 13.5px; font-weight: 800; letter-spacing: 0.2px;
+    font-family: 'SF Mono', 'Consolas', monospace; white-space: nowrap;
+  }
+  .face {
+    width: 48px; height: 48px; flex: 0 0 auto;
+    border: none; border-radius: 14px; font-size: 24px; line-height: 1;
+    cursor: pointer;
+    background: linear-gradient(160deg, #4d5f80, #33405a);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 0 rgba(0, 0, 0, 0.4);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .face:hover { filter: brightness(1.1); }
+  .face:active {
+    transform: translateY(3px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 0 rgba(0, 0, 0, 0.4);
+  }
+  .modes { display: flex; gap: 5px; margin-bottom: 6px; }
+  .md {
+    flex: 1; padding: 8px 2px;
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04); color: #9fb0c9;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: .15s; font-family: inherit;
+  }
+  .md:hover { background: rgba(255, 255, 255, 0.09); color: #dfe8f5; }
+  .md.active {
+    background: linear-gradient(160deg, #7d5adb, #5a3fad);
+    color: #fff; border-color: rgba(170, 140, 255, 0.5);
+    box-shadow: 0 4px 14px rgba(125, 90, 219, 0.4);
+  }
+  .levels { display: flex; gap: 5px; margin-bottom: 6px; }
+  .lv {
+    flex: 1; padding: 7px 2px;
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04); color: #9fb0c9;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: .15s; font-family: inherit;
+  }
+  .lv:hover { background: rgba(255, 255, 255, 0.09); color: #dfe8f5; }
+  .lv.active {
+    background: linear-gradient(160deg, #3f7ddb, #2d5cad);
+    color: #fff; border-color: rgba(120, 180, 255, 0.5);
+    box-shadow: 0 4px 14px rgba(63, 125, 219, 0.4);
+  }
+  .custom-row { display: none; gap: 6px; margin-bottom: 6px; }
+  .custom-row.show { display: flex; }
+  .custom-field {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 4px; padding: 6px 6px; border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 10.5px; color: #7f90a8; font-weight: 600;
+  }
+  .custom-field input {
+    width: 40px; min-width: 0; border: none; background: transparent;
+    color: #dfe8f5; font-family: inherit; font-size: 12px;
+    font-weight: 800; outline: none; padding: 0; text-align: center;
+  }
+  .custom-field input::-webkit-inner-spin-button,
+  .custom-field input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .custom-field input[type=number] { -moz-appearance: textfield; }
+  .seed-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .seed-input {
+    flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.25); color: #dfe8f5;
+    font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px;
+    outline: none; transition: .15s;
+  }
+  .seed-input:focus { border-color: rgba(126, 200, 255, 0.5); }
+  .seed-input::placeholder { color: #5c6b82; }
+  .seed-btn {
+    padding: 7px 10px; border-radius: 8px;
+    border: 1px solid rgba(126, 200, 255, 0.35);
+    background: linear-gradient(160deg, rgba(126, 200, 255, .16), rgba(126, 200, 255, .05));
+    color: #7ec8ff; font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: .15s;
+  }
+  .seed-btn:hover { background: linear-gradient(160deg, rgba(126, 200, 255, .28), rgba(126, 200, 255, .1)); }
+  .seed-btn.random {
+    border-color: rgba(255, 209, 102, 0.35);
+    background: linear-gradient(160deg, rgba(255, 209, 102, .16), rgba(255, 209, 102, .05));
+    color: #ffd166;
+  }
+  .seed-btn.random:hover { background: linear-gradient(160deg, rgba(255, 209, 102, .28), rgba(255, 209, 102, .1)); }
+  .board-wrap {
+    max-width: 100%; max-height: 55vh; overflow: auto; padding: 6px; border-radius: 12px;
+    background: rgba(0, 0, 0, 0.28);
+    box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.55);
+  }
+  .board {
+    --cell: 36px; display: grid; gap: 3px; margin: 0 auto;
+    width: fit-content; font-size: calc(var(--cell) * 0.52);
+  }
+  .cell {
+    width: var(--cell); height: var(--cell); padding: 0; border: none;
+    border-radius: calc(var(--cell) * 0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: inherit; font-weight: 800; line-height: 1;
+    cursor: pointer; color: #fff;
+    background: linear-gradient(160deg, #52658a, #37445c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 0 rgba(0, 0, 0, 0.38);
+    transition: background .1s, transform .06s;
+  }
+  .cell:hover:not(.revealed) { background: linear-gradient(160deg, #61779f, #42506c); }
+  .cell:active:not(.revealed) { transform: translateY(1px); }
+  .cell.revealed {
+    cursor: default; background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+  .cell.revealed.chord-ready {
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.8), 0 0 14px rgba(255, 209, 102, 0.4);
+  }
+  .cell.font-sm { font-size: calc(var(--cell) * 0.3); }
+  .cell.font-md { font-size: calc(var(--cell) * 0.4); }
+  .cell.mine-shown { background: rgba(255, 255, 255, 0.12); }
+  .cell.boom {
+    background: #ff4d4d !important;
+    box-shadow: 0 0 16px rgba(255, 77, 77, 0.9) !important;
+    animation: shake .4s; color: #fff !important;
+  }
+  .cell.wrong {
+    background: rgba(255, 90, 90, 0.15); position: relative;
+  }
+  .cell.wrong::after {
+    content: "✕"; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #ff6b6b; font-size: 1.1em;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
+  @keyframes pop {
+    0%   { transform: scale(.55); }
+    60%  { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  .cell.pop {
+    animation: pop .34s cubic-bezier(.34, 1.56, .64, 1);
+    z-index: 2; position: relative;
+  }
+  .bottombar {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 8px; margin-top: 10px;
+  }
+  .switch {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 12px 7px 10px; border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04); color: #9fb0c9;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: .18s; user-select: none; white-space: nowrap;
+  }
+  .switch:hover { background: rgba(255, 255, 255, 0.09); color: #dfe8f5; }
+  .switch .track {
+    position: relative; width: 36px; height: 20px; flex: 0 0 auto;
+    border-radius: 999px; background: rgba(0, 0, 0, 0.45);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+    transition: background .18s;
+  }
+  .switch .thumb {
+    position: absolute; top: 3px; left: 3px; width: 14px; height: 14px;
+    border-radius: 50%; background: #8f9db4;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    transition: transform .2s cubic-bezier(.34, 1.4, .64, 1), background .18s;
+  }
+  .switch.on {
+    border-color: rgba(126, 200, 255, 0.6);
+    background: linear-gradient(160deg, rgba(126, 200, 255, .22), rgba(126, 200, 255, .07));
+    color: #7ec8ff; box-shadow: 0 0 18px rgba(126, 200, 255, .22);
+  }
+  .switch.on .track {
+    background: rgba(63, 125, 219, 0.85);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 12px rgba(126, 200, 255, .5);
+  }
+  .switch.on .thumb { transform: translateX(16px); background: #ffffff; }
+  .tutorial-btn {
+    padding: 7px 12px; border-radius: 12px;
+    border: 1px solid rgba(255, 209, 102, 0.4);
+    background: linear-gradient(160deg, rgba(255, 209, 102, .18), rgba(255, 209, 102, .06));
+    color: #ffd166; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: .15s; white-space: nowrap; font-family: inherit;
+  }
+  .tutorial-btn:hover {
+    background: linear-gradient(160deg, rgba(255, 209, 102, .3), rgba(255, 209, 102, .12));
+    box-shadow: 0 0 16px rgba(255, 209, 102, .28);
+  }
+  .tutorial-btn:active { transform: translateY(1px); }
+
+  /* ---------- 撤回按钮 ---------- */
+  .undo-btn {
+    padding: 7px 12px; border-radius: 12px;
+    border: 1px solid rgba(126, 200, 255, 0.4);
+    background: linear-gradient(160deg, rgba(126, 200, 255, .18), rgba(126, 200, 255, .06));
+    color: #7ec8ff; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: .15s; white-space: nowrap; font-family: inherit;
+  }
+  .undo-btn:hover:not(:disabled) {
+    background: linear-gradient(160deg, rgba(126, 200, 255, .3), rgba(126, 200, 255, .12));
+    box-shadow: 0 0 16px rgba(126, 200, 255, .28);
+  }
+  .undo-btn:active:not(:disabled) { transform: translateY(1px); }
+  .undo-btn:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+    filter: grayscale(.6);
+  }
+
+  .zoom-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; padding: 6px 10px;
+    border-radius: 11px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .zoom-label {
+    font-size: 12px; color: #7f90a8; font-weight: 700;
+    letter-spacing: 0.5px; flex: 0 0 auto;
+  }
+  .zoom-btn {
+    width: 28px; height: 28px; flex: 0 0 auto;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: #dfe8f5; font-size: 16px; font-weight: 800;
+    cursor: pointer; font-family: inherit; line-height: 1;
+    transition: .15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+  .zoom-btn:active:not(:disabled) { transform: translateY(1px); }
+  .zoom-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .zoom-value {
+    min-width: 52px; flex: 0 0 auto;
+    text-align: center;
+    font-size: 12.5px; font-weight: 800;
+    color: #7ec8ff;
+    font-variant-numeric: tabular-nums;
+    font-family: 'SF Mono', 'Consolas', monospace;
+  }
+  .zoom-reset {
+    margin-left: auto;
+    padding: 6px 12px; flex: 0 0 auto;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: #9fb0c9; font-size: 11.5px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: .15s;
+  }
+  .zoom-reset:hover { background: rgba(255, 255, 255, 0.1); color: #dfe8f5; }
+  .zoom-reset:active { transform: translateY(1px); }
+
+  .tip-text {
+    font-size: 11px; color: #7f90a8; line-height: 1.5;
+    margin-left: auto; text-align: right; white-space: pre-line;
+  }
+  .calculator {
+    margin-top: 10px; padding: 8px 10px 10px; border-radius: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex; align-items: center; gap: 10px;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .calc-label {
+    font-size: 10.5px; color: #7f90a8; letter-spacing: 1px;
+    writing-mode: vertical-rl; text-orientation: mixed; line-height: 1;
+  }
+  .calc-grid {
+    --calc-cell: 30px; display: grid;
+    grid-template-columns: repeat(3, var(--calc-cell)); gap: 3px;
+  }
+  .calc-cell {
+    width: var(--calc-cell); height: var(--calc-cell);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: calc(var(--calc-cell) * 0.58);
+    font-weight: 800; background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: #5c6b82; user-select: none; transition: background .12s;
+  }
+  .calc-cell.font-sm { font-size: calc(var(--calc-cell) * 0.38); }
+  .calc-cell.font-md { font-size: calc(var(--calc-cell) * 0.48); }
+  .calc-clickable { cursor: pointer; }
+  .calc-clickable:hover { background: rgba(255, 255, 255, 0.1); }
+  .calc-clickable:active { transform: translateY(1px); }
+  .calc-cell.has-mine {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .calc-center {
+    background: linear-gradient(160deg, #2d3a52, #1e2737);
+    border-color: rgba(255, 255, 255, 0.12);
+    cursor: default; font-weight: 800;
+  }
+  .calc-hint {
+    font-size: 10px; color: #6b7b92; line-height: 1.5; max-width: 120px;
+  }
+  .calc-reset {
+    padding: 7px 12px; border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05); color: #9fb0c9;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: .15s; white-space: nowrap;
+  }
+  .calc-reset:hover { background: rgba(255, 255, 255, 0.1); color: #dfe8f5; }
+  .calc-reset:active { transform: translateY(1px); }
+
+  .codex-panel {
+    width: 268px; max-height: calc(100vh - 32px);
+    display: flex; flex-direction: column;
+    padding: 14px 12px; overflow: hidden;
+  }
+  .codex-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin-bottom: 4px; padding: 0 2px;
+  }
+  .codex-title {
+    font-size: 15px; font-weight: 800; color: #dfe8f5; letter-spacing: 1px;
+  }
+  .codex-mode {
+    font-size: 11px; font-weight: 700; color: #7ec8ff;
+    padding: 3px 8px; border-radius: 999px;
+    background: rgba(126, 200, 255, 0.12);
+    border: 1px solid rgba(126, 200, 255, 0.25);
+  }
+  .codex-desc {
+    font-size: 10.5px; color: #7f90a8; line-height: 1.5;
+    padding: 0 2px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 8px;
+  }
+  .codex-list {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 6px; padding-right: 2px; align-content: start;
+  }
+  .codex-list::-webkit-scrollbar { width: 5px; }
+  .codex-list::-webkit-scrollbar-track { background: transparent; }
+  .codex-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14); border-radius: 4px;
+  }
+  .codex-list::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); }
+  .codex-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 6px; border-radius: 9px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer; transition: .15s;
+  }
+  .codex-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+  .codex-item:active { transform: translateY(0); }
+  .codex-num {
+    min-width: 30px; font-size: 12.5px; font-weight: 800;
+    text-align: right; line-height: 1.1;
+    flex: 0 0 auto; letter-spacing: 0.2px;
+  }
+  .codex-num.long { font-size: 10.5px; min-width: 34px; }
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, var(--mini-size, 11px));
+    grid-template-rows: repeat(3, var(--mini-size, 11px));
+    gap: 2px; flex: 0 0 auto;
+  }
+  .mini-grid-lg { --mini-size: 17px; gap: 3px; }
+  .mini-cell {
+    width: 100%; height: 100%; border-radius: 3px;
+    background: rgba(255, 255, 255, 0.055);
+  }
+  .mini-grid-lg .mini-cell { border-radius: 4px; }
+  .mini-cell.mini-center {
+    border-radius: 50%; background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.45);
+  }
+  .mini-mine-1 { background: #ff5c5c !important; }
+  .mini-mine-2 { background: #5c9eff !important; }
+  .mini-mine-3 { background: #c084fc !important; }
+  .mini-mine-4 { background: #ffd166 !important; }
+  .mini-multi-1 { background: #ff5c5c !important; }
+  .mini-multi-2 { background: #ffc978 !important; }
+  .mini-multi-3 { background: #7dffa8 !important; }
+
+  .complex-calc {
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: none;
+  }
+  .complex-calc.visible { display: block; }
+  .complex-title {
+    font-size: 12px; font-weight: 700; color: #dfe8f5;
+    margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  #complexCanvas {
+    display: block; width: 100%; max-width: 230px; aspect-ratio: 1 / 1;
+    margin: 0 auto; border-radius: 10px; background: #0a0e15;
+    cursor: crosshair; border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .complex-info {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4px 8px; margin-top: 8px; font-size: 11.5px;
+  }
+  .ci-row { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+  .ci-label { color: #7f90a8; font-weight: 600; flex: 0 0 auto; }
+  .ci-val {
+    font-weight: 800; font-family: 'SF Mono', 'Consolas', monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .codex-modal, .tutorial-modal {
+    position: fixed; inset: 0;
+    background: rgba(5, 8, 14, 0.78);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .codex-modal.show, .tutorial-modal.show { display: flex; }
+  .codex-modal-card {
+    width: min(640px, 100%); max-height: 80vh;
+    background: #1a2230; border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px; padding: 16px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  }
+  .codex-modal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .codex-modal-title {
+    font-size: 14.5px; font-weight: 700; color: #dfe8f5; line-height: 1.4;
+  }
+  .codex-modal-close {
+    width: 28px; height: 28px; flex: 0 0 auto;
+    border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05); color: #9fb0c9;
+    font-size: 13px; cursor: pointer; font-family: inherit; transition: .15s;
+  }
+  .codex-modal-close:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+  .codex-modal-body {
+    flex: 1; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 8px; align-content: start; padding-right: 4px;
+  }
+  .codex-modal-body::-webkit-scrollbar { width: 6px; }
+  .codex-modal-body::-webkit-scrollbar-track { background: transparent; }
+  .codex-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14); border-radius: 4px;
+  }
+  .codex-combo-item {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 8px 6px; background: rgba(0, 0, 0, 0.25);
+    border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .codex-combo-text {
+    font-size: 10.5px; color: #9fb0c9; text-align: center;
+    line-height: 1.35; font-family: 'SF Mono', 'Consolas', monospace;
+    word-break: break-all;
+  }
+  .codex-empty {
+    grid-column: 1 / -1; text-align: center;
+    padding: 30px 10px; color: #6b7b92; font-size: 12.5px;
+  }
+
+  .tutorial-modal {
+    z-index: 110; background: rgba(5, 8, 14, 0.82);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  }
+  .tutorial-card {
+    width: min(580px, 100%); max-height: 84vh;
+    background: #1a2230; border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px; display: flex; flex-direction: column;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75); overflow: hidden;
+  }
+  .tutorial-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.22);
+  }
+  .tutorial-title {
+    font-size: 15px; font-weight: 800; color: #dfe8f5; line-height: 1.3;
+  }
+  .tutorial-close {
+    width: 28px; height: 28px; flex: 0 0 auto;
+    border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05); color: #9fb0c9;
+    font-size: 13px; cursor: pointer; font-family: inherit; transition: .15s;
+  }
+  .tutorial-close:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+  .tutorial-body {
+    padding: 16px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .tutorial-body::-webkit-scrollbar { width: 6px; }
+  .tutorial-body::-webkit-scrollbar-track { background: transparent; }
+  .tutorial-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14); border-radius: 4px;
+  }
+  .tutorial-section {
+    padding: 12px 14px; border-radius: 11px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+  }
+  .tutorial-section.strategy {
+    background: rgba(126, 200, 255, 0.045);
+    border-color: rgba(126, 200, 255, 0.14);
+  }
+  .tutorial-heading {
+    font-size: 13px; font-weight: 800; color: #7ec8ff;
+    margin-bottom: 7px; letter-spacing: 0.5px;
+  }
+  .tutorial-section.strategy .tutorial-heading { color: #ffd166; }
+  .tutorial-text {
+    font-size: 12.5px; line-height: 1.75; color: #b6c3d6;
+  }
+  .tutorial-text b { color: #ffd166; font-weight: 700; }
+  .tutorial-example {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 10px; padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.32); border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .tutorial-example-label {
+    font-size: 11.5px; color: #9fb0c9; line-height: 1.6; flex: 1;
+  }
+  .tutorial-example-num {
+    display: inline-block; margin-top: 3px; font-weight: 800; font-size: 14px;
+  }
+  .tutorial-symbols {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px;
+  }
+  .tutorial-symbol {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .tutorial-dot {
+    width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto;
+  }
+  .tutorial-code {
+    display: inline-block; padding: 1px 6px; border-radius: 5px;
+    background: rgba(0, 0, 0, 0.4);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 11.5px; color: #7dffa8; margin: 0 2px;
+  }
+
+  @media (max-width: 920px) {
+    body { overflow: auto; align-items: flex-start; }
+    .app { flex-direction: column; width: 100%; align-items: center; }
+    .codex-panel { width: min(100%, 420px); max-height: none; }
+    .codex-list { grid-template-columns: repeat(3, 1fr); max-height: 300px; }
+    .tip-text { display: none; }
+  }
+  @media (max-width: 700px) {
+    .panel { padding: 10px; border-radius: 16px; }
+    .stat { min-width: 62px; font-size: 14px; padding: 5px 8px; max-width: 200px; }
+    .stat-item { font-size: 11px; }
+    .face { width: 40px; height: 40px; font-size: 20px; }
+    .switch { padding: 6px 10px 6px 8px; font-size: 12px; }
+    .tutorial-btn { padding: 6px 10px; font-size: 12px; }
+    .undo-btn { padding: 6px 10px; font-size: 12px; }
+    .md { font-size: 10.5px; padding: 7px 2px; }
+    .lv { font-size: 10px; padding: 6px 2px; }
+    .seed-btn { padding: 6px 7px; font-size: 10px; }
+    .seed-input { font-size: 10px; padding: 6px 8px; }
+    .calc-grid { --calc-cell: 26px; }
+    .calc-hint { display: none; }
+    .codex-list { grid-template-columns: repeat(2, 1fr); }
+    .tutorial-example { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .zoom-label { display: none; }
+    .zoom-value { min-width: 44px; font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="panel game-panel">
+    <div class="topbar">
+      <div class="stat" id="mineStat">10</div>
+      <button id="face" class="face" title="重新开始">🙂</button>
+      <div class="stat" id="timeStat">000</div>
+    </div>
+
+    <div class="modes">
+      <button class="md active" data-mode="normal">普通扫雷</button>
+      <button class="md" data-mode="multi">多雷扫雷</button>
+      <button class="md" data-mode="plusminus">正负扫雷</button>
+      <button class="md" data-mode="complex">复扫雷</button>
+    </div>
+
+    <div class="levels">
+      <button class="lv active" data-level="easy">初级</button>
+      <button class="lv" data-level="medium">中级</button>
+      <button class="lv" data-level="hard">高级</button>
+      <button class="lv" data-level="custom">自定义</button>
+    </div>
+
+    <div class="custom-row" id="customRow">
+      <label class="custom-field"><span>宽</span><input type="number" id="customCols" min="5" max="40" value="12"></label>
+      <label class="custom-field"><span>高</span><input type="number" id="customRows" min="5" max="30" value="12"></label>
+      <label class="custom-field"><span>雷</span><input type="number" id="customMines" min="1" max="500" value="20"></label>
+    </div>
+
+    <div class="seed-row">
+      <input type="text" id="seedInput" class="seed-input" placeholder="输入种子，如 abc123">
+      <button class="seed-btn" id="seedApplyBtn">🌱 种子开局</button>
+      <button class="seed-btn random" id="randomBtn">🎲 随机</button>
+    </div>
+
+    <div class="board-wrap">
+      <div id="board" class="board"></div>
+    </div>
+
+    <div class="bottombar">
+      <div id="autoSwitch" class="switch" role="switch" aria-checked="false" tabindex="0">
+        <span class="track"><span class="thumb"></span></span>
+        <span>🚩 自动标雷</span>
+      </div>
+      <button id="undoBtn" class="undo-btn" title="撤回上一步（Ctrl+Z / Z）" disabled>↶ 撤回</button>
+      <button id="tutorialBtn" class="tutorial-btn">📚 教程</button>
+      <span class="tip-text" id="tipText"></span>
+    </div>
+
+    <div class="zoom-row">
+      <span class="zoom-label">🔍 缩放</span>
+      <button class="zoom-btn" id="zoomOut" title="缩小">−</button>
+      <span class="zoom-value" id="zoomValue">100%</span>
+      <button class="zoom-btn" id="zoomIn" title="放大">+</button>
+      <button class="zoom-reset" id="zoomReset">重置</button>
+    </div>
+
+    <div class="calculator">
+      <div class="calc-label">数字<br>计算器</div>
+      <div class="calc-grid" id="calcGrid"></div>
+      <div class="calc-hint" id="calcHint"></div>
+      <button class="calc-reset" id="calcReset" title="清空计算器">↺ 重置</button>
+    </div>
+  </div>
+
+  <div class="panel codex-panel">
+    <div class="codex-header">
+      <span class="codex-title">📖 方块图鉴</span>
+      <span class="codex-mode" id="codexMode">普通扫雷</span>
+    </div>
+    <div class="codex-desc" id="codexDesc">每个数字代表周围 8 格中雷的数量。点击卡片查看全部组合。</div>
+    <div class="codex-list" id="codexList"></div>
+
+    <div class="complex-calc" id="complexCalc">
+      <div class="complex-title">🧭 复平面图解计算器</div>
+      <canvas id="complexCanvas"></canvas>
+      <div class="complex-info">
+        <div class="ci-row"><span class="ci-label">复数</span><span class="ci-val" id="ciComplex">—</span></div>
+        <div class="ci-row"><span class="ci-label">模长</span><span class="ci-val" id="ciMag">—</span></div>
+        <div class="ci-row"><span class="ci-label">Re</span><span class="ci-val" id="ciRe">—</span></div>
+        <div class="ci-row"><span class="ci-label">Im</span><span class="ci-val" id="ciIm">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="codex-modal" id="codexModal">
+  <div class="codex-modal-card">
+    <div class="codex-modal-head">
+      <span class="codex-modal-title" id="codexModalTitle"></span>
+      <button class="codex-modal-close" id="codexModalClose">✕</button>
+    </div>
+    <div class="codex-modal-body" id="codexModalBody"></div>
+  </div>
+</div>
+
+<div class="tutorial-modal" id="tutorialModal">
+  <div class="tutorial-card">
+    <div class="tutorial-head">
+      <span class="tutorial-title" id="tutorialTitle"></span>
+      <button class="tutorial-close" id="tutorialClose">✕</button>
+    </div>
+    <div class="tutorial-body" id="tutorialBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== 配置 ==================== */
+  const LEVELS = {
+    easy:   { cols: 9,  rows: 9,  mines: 10, maxCell: 44 },
+    medium: { cols: 16, rows: 16, mines: 40, maxCell: 36 },
+    hard:   { cols: 30, rows: 16, mines: 99, maxCell: 30 }
+  };
+  const GAP = 3;
+  const MAX_HISTORY = 200;
+
+  const MINE_TYPES = {
+    normal: [
+      { v: 1, symbol: '🚩', color: '#ffd166' }
+    ],
+    multi: [
+      { v: 1, symbol: '①', color: '#ff5c5c' },
+      { v: 2, symbol: '②', color: '#ffc978' },
+      { v: 3, symbol: '③', color: '#7dffa8' }
+    ],
+    plusminus: [
+      { v: 1, symbol: '＋', color: '#ff5c5c' },
+      { v: 2, symbol: '－', color: '#5c9eff' }
+    ],
+    complex: [
+      { v: 1, symbol: '+',  color: '#ff5c5c' },
+      { v: 2, symbol: '−',  color: '#5c9eff' },
+      { v: 3, symbol: '+i', color: '#c084fc' },
+      { v: 4, symbol: '−i', color: '#ffd166' }
+    ]
+  };
+
+  const TIPS = {
+    normal:    '左键翻开 · 右键/长按插旗\n数字周围所有雷都插旗后，点击数字一键展开',
+    multi:     '数字 = 周围所有雷的代表值之和\n雷：①=1 / ②=2 / ③=3\n右键循环：无 → ① → ② → ③\n周围完全没有雷的格子显示为空白并自动展开',
+    plusminus: '数字 = 周围「正雷数 − 负雷数」\n右键循环：无 → ＋ → －\n周围完全没有雷的格子显示为空白并自动展开',
+    complex:   '数字 = 周围所有雷之和的模长\n雷：+1红 / −1蓝 / +i紫 / −i黄\n右键循环：无 → +1 → −1 → +i → −i\n周围完全没有雷的格子显示为空白并自动展开'
+  };
+
+  const CODEX_DESC = {
+    normal:    '每个数字代表周围 8 格中雷的数量。点击卡片查看全部组合。',
+    multi:     '数字 = 周围所有雷的代表值之和（0~24）。点击卡片查看全部组合。',
+    plusminus: '数字 = 周围正雷数 − 负雷数。点击卡片查看全部组合。',
+    complex:   '数字 = 周围所有雷之和的模长。点击卡片查看全部组合。'
+  };
+
+  const NUM_COLORS = {
+    1: 'hsl(210, 100%, 72%)', 2: 'hsl(140, 100%, 70%)',
+    3: 'hsl(0, 100%, 76%)',   4: 'hsl(270, 100%, 82%)',
+    5: 'hsl(35, 100%, 70%)',  6: 'hsl(180, 90%, 64%)',
+    7: 'hsl(320, 100%, 82%)', 8: 'hsl(220, 15%, 85%)'
+  };
+
+  const NEG_COLORS = {
+    1: 'hsl(30, 100%, 70%)',  2: 'hsl(320, 100%, 75%)',
+    3: 'hsl(180, 100%, 72%)', 4: 'hsl(90, 100%, 72%)',
+    5: 'hsl(215, 100%, 72%)', 6: 'hsl(0, 90%, 70%)',
+    7: 'hsl(140, 100%, 72%)', 8: 'hsl(40, 12%, 62%)'
+  };
+
+  const MAG_COLORS = {
+    0:  '#8b95a8', 1:  '#7ec8ff', 2:  '#7dffa8', 4:  '#ff8f8f',
+    5:  '#c9a6ff', 8:  '#ffc978', 9:  '#6fe3e1', 10: '#ffb0e0',
+    13: '#b8e986', 16: '#c8d2e0', 17: '#f9a8d4', 18: '#a3e635',
+    20: '#fb923c', 25: '#60a5fa', 26: '#e879f9', 29: '#2dd4bf',
+    32: '#fcd34d', 34: '#a78bfa', 36: '#4ade80', 37: '#f87171',
+    40: '#38bdf8', 49: '#fbbf24', 50: '#c084fc', 64: '#e2e8f0'
+  };
+
+  const MULTI_COLORS = {
+    0:  '#8b95a8',
+    1:  '#7ec8ff',  2:  '#7dffa8',  3:  '#ffd166',  4:  '#ff8f8f',
+    5:  '#c9a6ff',  6:  '#6fe3e1',  7:  '#ffb0e0',  8:  '#b8e986',
+    9:  '#f9a8d4',  10: '#a3e635',  11: '#fb923c',  12: '#60a5fa',
+    13: '#e879f9',  14: '#2dd4bf',  15: '#fcd34d',  16: '#a78bfa',
+    17: '#4ade80',  18: '#f87171',  19: '#38bdf8',  20: '#fbbf24',
+    21: '#c084fc',  22: '#34d399',  23: '#fb7185',  24: '#93c5fd'
+  };
+
+  const COMPLEX_CODEX = [
+    { re: 0, im: 0 }, { re: 1, im: 0 }, { re: 1, im: 1 }, { re: 2, im: 0 },
+    { re: 2, im: 1 }, { re: 2, im: 2 }, { re: 3, im: 0 }, { re: 3, im: 1 },
+    { re: 3, im: 2 }, { re: 4, im: 0 }, { re: 4, im: 1 }, { re: 3, im: 3 },
+    { re: 4, im: 2 }, { re: 5, im: 0 }, { re: 5, im: 1 }, { re: 5, im: 2 },
+    { re: 4, im: 4 }, { re: 5, im: 3 }, { re: 6, im: 0 }, { re: 6, im: 1 },
+    { re: 6, im: 2 }, { re: 7, im: 0 }, { re: 7, im: 1 }, { re: 8, im: 0 }
+  ];
+
+  const NEIGHBOR_ORDER = [0, 1, 2, 3, 5, 6, 7, 8];
+
+  /* ==================== 教程内容 ==================== */
+  const TUTORIALS = {
+    normal: {
+      title: '📚 普通扫雷 · 教程',
+      sections: [
+        { heading: '① 游戏目标', text: '翻开棋盘上所有<b>非雷格子</b>，同时避开地雷。踩到雷即失败，翻开全部安全格即胜利。' },
+        { heading: '② 数字的含义',
+          text: '翻开后的数字表示它<b>周围 8 格</b>中的雷数。数字越大，周围雷越多；空白表示周围没有雷，会自动展开相邻的安全区。',
+          example: { num: '3', numColor: '#ff8f8f', mines: [1,1,1,0,0,0,0,0,0], desc: '这一格周围有 3 颗雷' } },
+        { heading: '③ 操作方式',
+          text: '• <b>左键</b>：翻开格子<br>• <b>右键 / 长按</b>：插旗标记雷<br>• <b>点击已翻开的数字</b>：若周围所有雷都已插旗，可一键展开其余安全格<br>• <b>↶ 撤回</b>：误触时撤回上一步（快捷键 Ctrl+Z / Z）' },
+        { heading: '④ 首点保护', text: '第一次点击的格子及其周围 8 格<b>不会布雷</b>，保证开局安全。（种子模式下无首点保护）' },
+        { heading: '🎯 破局方法 · 基础排除法',
+          text: '这是最常用的推理方法，贯穿全局：<br>• 数字 <span class="tutorial-code">N</span> 周围如果已经有 <span class="tutorial-code">N</span> 个旗子 → 其余未知格<b>一定不是雷</b>，可安全翻开<br>• 数字 <span class="tutorial-code">N</span> 周围如果未知格数量正好等于 <span class="tutorial-code">N</span> → 这些未知格<b>全是雷</b>，可全部插旗',
+          strategy: true },
+        { heading: '🎯 破局方法 · 1-2-1 模式',
+          text: '一排上出现 <span class="tutorial-code">1 2 1</span> 这种排列时，两个 1 外侧的格子<b>一定都是雷</b>，2 正下方的格子<b>一定是安全的</b>。这是最经典的固定套路。',
+          strategy: true },
+        { heading: '🎯 破局方法 · 1-2-2-1 模式',
+          text: '一排上出现 <span class="tutorial-code">1 2 2 1</span> 时，两端的两个 1 各自外侧的格子<b>都是雷</b>。这和 1-2-1 是同一个思路的延伸。',
+          strategy: true },
+        { heading: '🎯 破局方法 · 相邻数字差值法',
+          text: '如果两个相邻数字 A 和 B（A > B），且 A 的未知邻格恰好比 B 多（A−B）个，那么多出来的这些格子<b>全是雷</b>。<br>反之如果 A 的未知格等于 B 的未知格，那么 A 比 B 多出来的雷一定在两者不共有的邻格里。' },
+        { heading: '🎯 破局方法 · 角落与边缘',
+          text: '角落的数字 1 只覆盖 3 个格子，所以如果角落是 1，且周围有 2 个旗子，第三个格子必定安全。<br>边缘的数字推理空间更小，往往能更快锁定雷的位置。' },
+        { heading: '🎯 破局方法 · 概率抉择',
+          text: '当所有逻辑都用完还是无法确定时，选择<b>周围数字最大但未知格最少</b>的区域来猜，命中雷的概率相对较低。' }
+      ]
+    },
+    multi: {
+      title: '📚 多雷扫雷 · 教程',
+      sections: [
+        { heading: '① 与普通扫雷的区别',
+          text: '本模式有<b>三种雷</b>：一雷（①=1）、二雷（②=2）、三雷（③=3）。<br>每颗雷贡献自己的数值，格子的数字是周围所有雷的代表值<b>之和</b>。' },
+        { heading: '② 数字的含义',
+          text: '数字 = 周围 8 格中所有雷代表值的<b>总和</b>，范围从 0 到 24（8 颗三雷）。',
+          example: { num: '6', numColor: '#6fe3e1', mines: [1,2,3,0,0,0,0,0,0], desc: '1 个一雷 + 1 个二雷 + 1 个三雷 → 1+2+3 = 6' } },
+        { heading: '③ 三种雷的标记',
+          text: '右键 / 长按循环切换：<b>无 → ① → ② → ③</b>。左上角会分别显示三种雷的剩余数量。',
+          symbols: [ { color: '#ff5c5c', text: '① 一雷 (1)' }, { color: '#ffc978', text: '② 二雷 (2)' }, { color: '#7dffa8', text: '③ 三雷 (3)' } ] },
+        { heading: '④ 空白格的含义',
+          text: '周围 8 格<b>完全没有雷</b>的格子显示为空白，并自动展开相邻安全区。<br>本模式数字 0 一定表示周围无雷。' },
+        { heading: '🎯 破局方法 · 总和匹配法',
+          text: '设数字为 <span class="tutorial-code">D</span>，周围已插旗雷值之和为 <span class="tutorial-code">S</span>，未知格数量为 <span class="tutorial-code">U</span>，剩余和 <span class="tutorial-code">R = D − S</span>：<br>• 如果 <span class="tutorial-code">R = U</span> → 所有未知格<b>全是一雷 ①</b><br>• 如果 <span class="tutorial-code">R = 3U</span> → 所有未知格<b>全是三雷 ③</b>',
+          strategy: true },
+        { heading: '🎯 破局方法 · 单格推断',
+          text: '如果某个数字周围只剩 <b>1 个未知格</b>，那么该格的值直接等于 <span class="tutorial-code">R = D − S</span>。<br>例如数字 5，周围已标记 1 个一雷 + 1 个二雷（和 = 3），剩余 R = 2，那么唯一未知格必然是<b>二雷 ②</b>。',
+          strategy: true },
+        { heading: '🎯 破局方法 · 相邻数字差值法',
+          text: '两个相邻数字的差值 = 它们各自“未共有邻格”中雷值之和。<br>例如数字 <span class="tutorial-code">7</span> 和数字 <span class="tutorial-code">4</span> 相邻，差值 3 就来自只有 7 覆盖的格子。如果这些格子只有 1 个，那它一定是<b>三雷 ③</b>。',
+          strategy: true },
+        { heading: '🎯 破局方法 · 极值锁定',
+          text: '数字 <span class="tutorial-code">24</span> 的格子周围一定是 8 个三雷，数字 <span class="tutorial-code">1</span> 的格子周围只有 1 个一雷（如果周围有 8 格）。<br>利用上下界可以快速缩小可能性。' },
+        { heading: '🎯 破局方法 · 概率抉择',
+          text: '当逻辑无法完全确定时，优先选择周围<b>数字较大且未知格较少</b>的区域猜测。<br>也可以根据“剩余各类雷的数量”来推断哪些区域更可能是大雷。' }
+      ]
+    },
+    plusminus: {
+      title: '📚 正负扫雷 · 教程',
+      sections: [
+        { heading: '① 与普通扫雷的区别', text: '本模式有<b>两种雷</b>：正雷（＋，+1）和负雷（－，-1）。游戏目标相同：翻开所有非雷格子。' },
+        { heading: '② 数字的含义',
+          text: '数字 = 周围 8 格中 <b>正雷数 − 负雷数</b>，范围 −8 到 8。',
+          example: { num: '1', numColor: '#7ec8ff', mines: [1,1,2,0,0,0,0,0,0], desc: '2 个正雷和 1 个负雷 → 2 − 1 = 1' } },
+        { heading: '③ 两种雷的标记',
+          text: '右键 / 长按循环切换：<b>无 → ＋ → －</b>。左上角会分别显示两种雷的剩余数量。',
+          symbols: [ { color: '#ff5c5c', text: '＋ 正雷 (+1)' }, { color: '#5c9eff', text: '－ 负雷 (-1)' } ] },
+        { heading: '④ 空白格与灰色 0',
+          text: '周围 8 格<b>完全没有雷</b>的格子显示为空白，并自动展开相邻安全区。<br>周围有抵消对（一正一负）时显示为灰色 <b>0</b>，不会自动展开——因为周围确实有雷。' },
+        { heading: '🎯 破局方法 · 数量匹配法',
+          text: '设数字为 <span class="tutorial-code">D</span>，未知格数量为 <span class="tutorial-code">U</span>：<br>• 如果 <span class="tutorial-code">D = U</span> → 所有未知格<b>全是正雷</b>，全部标 ＋<br>• 如果 <span class="tutorial-code">D = −U</span> → 所有未知格<b>全是负雷</b>，全部标 －<br>• 如果 <span class="tutorial-code">D = 0 且 U = 2</span> → 两个未知格<b>一正一负</b>',
+          strategy: true },
+        { heading: '🎯 破局方法 · 抵消对识别',
+          text: '数字 <span class="tutorial-code">0</span> 且周围没有空白格（说明周围确实有雷）时，周围一定存在<b>正负抵消对</b>。<br>如果已知周围有 1 个正雷，那么剩下的未知格里必然有一个负雷。',
+          strategy: true },
+        { heading: '🎯 破局方法 · 相邻数字差值法',
+          text: '两个相邻数字 A 和 B 的差值 = 它们各自“未共有邻格”中的雷值之和。<br>例如数字 <span class="tutorial-code">3</span> 和数字 <span class="tutorial-code">1</span> 相邻，它们的差值 2 就来自那些只有 3 才覆盖的格子。如果这些格子只有 2 个，那它们一定是 2 个正雷。' },
+        { heading: '🎯 破局方法 · 符号与数量同时推导',
+          text: '不仅要数<b>有几个雷</b>，还要推<b>是正还是负</b>。<br>比如数字 2 周围有 3 个未知格：可能的组合有 (2正0负)、(3正1负) 等。结合相邻数字的约束，往往能唯一确定。' },
+        { heading: '🎯 破局方法 · 概率抉择',
+          text: '当逻辑无法完全确定时，优先选择周围<b>数字绝对值大且未知格少</b>的区域猜测。<br>数字接近 0 的区域往往雷的种类更混杂，猜测风险更高。' }
+      ]
+    },
+    complex: {
+      title: '📚 复扫雷 · 教程',
+      sections: [
+        { heading: '① 与普通扫雷的区别', text: '本模式有<b>四种雷</b>：+1（红）、−1（蓝）、+i（紫）、−i（黄）。每种雷对应复平面上的一个方向。' },
+        { heading: '② 数字的含义',
+          text: '数字 = 周围 8 格中<b>所有雷之和的模长</b>。<br>例如 +1 和 +i 相加得到 1+i，模长为 √2。',
+          example: { num: '√2', numColor: '#7dffa8', mines: [1,3,0,0,0,0,0,0,0], desc: '1 个 +1 和 1 个 +i → 和 = 1 + i → 模长 = √2' } },
+        { heading: '③ 四种雷的标记',
+          text: '右键 / 长按循环切换：<b>无 → +1 → −1 → +i → −i</b>。左上角会分别显示四种雷的剩余数量。',
+          symbols: [ { color: '#ff5c5c', text: '+1' }, { color: '#5c9eff', text: '−1' }, { color: '#c084fc', text: '+i' }, { color: '#ffd166', text: '−i' } ] },
+        { heading: '④ 为什么模长这样算',
+          text: '把每颗雷看成复平面上的一个向量：+1 向右、−1 向左、+i 向上、−i 向下。<br>所有向量相加，从原点到终点的连线长度就是<b>模长</b>。<br>比如 +1 向右 1 格、+i 向上 1 格，终点在 (1,1)，长度 √(1²+1²) = √2。' },
+        { heading: '🎯 破局方法 · 最大模长法',
+          text: '设未知格数量为 <span class="tutorial-code">U</span>，数字的平方为 <span class="tutorial-code">S</span>：<br>• 如果 <span class="tutorial-code">S = U²</span> → 所有未知格都是<b>同一方向</b>的雷，具体方向由周围数字约束确定',
+          strategy: true },
+        { heading: '🎯 破局方法 · 抵消与配对',
+          text: '• 数字 <span class="tutorial-code">0</span> 且未知格 2 个 → 两个雷<b>方向完全相反</b>（+1/−1 或 +i/−i）<br>• 数字 <span class="tutorial-code">0</span> 且未知格 4 个 → 可能是两组抵消对，或者两对垂直方向<br>• 已知 +1 和 −1 各一个就能互相抵消，+i 和 −i 同理',
+          strategy: true },
+        { heading: '🎯 破局方法 · 方向分解',
+          text: '把数字看成复平面上的向量长度，可以反推可能的 (Re, Im) 组合。<br>例如模长平方是 <span class="tutorial-code">5</span>，可能的组合是 (±1, ±2) 或 (±2, ±1)。<br>结合周围已有的旗子，往往能锁定唯一组合。' },
+        { heading: '🎯 破局方法 · 利用图鉴与计算器',
+          text: '右侧<b>方块图鉴</b>列出了全部 24 种可能的数字，点击卡片可查看所有能组成该数字的雷组合。<br>下方<b>复平面图解计算器</b>可以直观地看到每个复数的方向和模长，帮助建立几何直觉。' },
+        { heading: '🎯 破局方法 · 概率抉择',
+          text: '当所有逻辑都用尽时，优先选择<b>模长较大且未知格较少</b>的区域猜测。<br>模长接近 0 的区域雷的种类更混杂，猜测命中雷的风险更高。' }
+      ]
+    }
+  };
+
+  /* ==================== 工具函数 ==================== */
+  function formatMagnitude(n) {
+    if (n === 0) return '0';
+    let k = 1, m = n;
+    for (let i = 2; i * i <= m; i++) {
+      while (m % (i * i) === 0) { m /= (i * i); k *= i; }
+    }
+    if (m === 1) return String(k);
+    if (k === 1) return '√' + m;
+    return k + '√' + m;
+  }
+
+  function magColor(n) { return MAG_COLORS[n] || '#c8d2e0'; }
+  function multiColor(n) { return MULTI_COLORS[n] || '#c8d2e0'; }
+
+  function formatComplex(re, im) {
+    if (re === 0 && im === 0) return '0';
+    let s = '';
+    if (re !== 0) s += re;
+    if (im !== 0) {
+      if (re !== 0) s += im > 0 ? '+' : '−';
+      else if (im < 0) s += '−';
+      const a = Math.abs(im);
+      s += (a === 1 ? '' : a) + 'i';
+    }
+    return s;
+  }
+
+  function hashString(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function randomSeedString() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  function createMiniGrid(mines, large) {
+    const grid = document.createElement('div');
+    grid.className = 'mini-grid' + (large ? ' mini-grid-lg' : '');
+    const isMulti = (mode === 'multi');
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-cell';
+      if (i === 4) cell.classList.add('mini-center');
+      else {
+        const t = mines[i] || 0;
+        if (t > 0) {
+          cell.classList.add(isMulti ? ('mini-multi-' + t) : ('mini-mine-' + t));
+        }
+      }
+      grid.appendChild(cell);
+    }
+    return grid;
+  }
+
+  /* ==================== DOM ==================== */
+  const boardEl     = document.getElementById('board');
+  const mineStat    = document.getElementById('mineStat');
+  const timeStat    = document.getElementById('timeStat');
+  const faceEl      = document.getElementById('face');
+  const autoSwitch  = document.getElementById('autoSwitch');
+  const undoBtn     = document.getElementById('undoBtn');
+  const tipText     = document.getElementById('tipText');
+  const calcGridEl  = document.getElementById('calcGrid');
+  const calcHintEl  = document.getElementById('calcHint');
+  const calcResetEl = document.getElementById('calcReset');
+  const codexListEl = document.getElementById('codexList');
+  const codexModeEl = document.getElementById('codexMode');
+  const codexDescEl = document.getElementById('codexDesc');
+  const complexCalcEl = document.getElementById('complexCalc');
+  const codexModal  = document.getElementById('codexModal');
+  const codexModalTitle = document.getElementById('codexModalTitle');
+  const codexModalBody  = document.getElementById('codexModalBody');
+
+  const tutorialBtn   = document.getElementById('tutorialBtn');
+  const tutorialModal = document.getElementById('tutorialModal');
+  const tutorialTitle = document.getElementById('tutorialTitle');
+  const tutorialBody  = document.getElementById('tutorialBody');
+
+  const customRow   = document.getElementById('customRow');
+  const customColsEl = document.getElementById('customCols');
+  const customRowsEl = document.getElementById('customRows');
+  const customMinesEl = document.getElementById('customMines');
+  const seedInput   = document.getElementById('seedInput');
+  const seedApplyBtn = document.getElementById('seedApplyBtn');
+  const randomBtn   = document.getElementById('randomBtn');
+
+  const zoomValueEl = document.getElementById('zoomValue');
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomResetBtn = document.getElementById('zoomReset');
+
+  /* ==================== 状态 ==================== */
+  let cfg, grid, cellEls;
+  let started, over, won;
+  let revealedCount, flagCount;
+  let timerId = null, seconds = 0;
+  let currentLevel = 'easy';
+  let mode = 'normal';
+  let autoFlagOn = false;
+  let currentSeed = null;
+  let zoomLevel = 1.0;
+
+  let history = [];
+
+  let calcEls = [];
+  let calcState = [0,0,0,0,0,0,0,0,0];
+  let complexPoint = null;
+
+  /* ==================== 基础工具 ==================== */
+  function forNeighbors(r, c, fn) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < cfg.rows && nc >= 0 && nc < cfg.cols) fn(nr, nc);
+      }
+    }
+  }
+
+  function pad3(n) { return String(n).padStart(3, '0'); }
+
+  function clearChordHighlight() {
+    const list = boardEl.querySelectorAll('.cell.chord-ready');
+    for (let i = 0; i < list.length; i++) list[i].classList.remove('chord-ready');
+  }
+
+  function recountFlags() {
+    let n = 0;
+    for (let r = 0; r < cfg.rows; r++) {
+      for (let c = 0; c < cfg.cols; c++) {
+        if (grid[r][c].flag !== 0) n++;
+      }
+    }
+    flagCount = n;
+  }
+
+  /* =========================================================
+     撤回机制
+     ========================================================= */
+  function pushHistory() {
+    if (!grid || !cfg) return;
+    const snapshot = {
+      started: started,
+      over: over,
+      won: won,
+      revealedCount: revealedCount,
+      flagCount: flagCount,
+      grid: grid.map(row => row.map(cell => ({
+        mine: cell.mine,
+        revealed: cell.revealed,
+        flag: cell.flag,
+        count: cell.count,
+        blank: cell.blank
+      })))
+    };
+    history.push(snapshot);
+    if (history.length > MAX_HISTORY) history.shift();
+    updateUndoBtn();
+  }
+
+  function updateUndoBtn() {
+    undoBtn.disabled = history.length === 0;
+  }
+
+  function undo() {
+    if (history.length === 0) return;
+    const snap = history.pop();
+
+    started = snap.started;
+    over = snap.over;
+    won = snap.won;
+    revealedCount = snap.revealedCount;
+    flagCount = snap.flagCount;
+    grid = snap.grid;
+
+    // 全量重渲染
+    for (let r = 0; r < cfg.rows; r++) {
+      for (let c = 0; c < cfg.cols; c++) {
+        updateCell(r, c);
+      }
+    }
+
+    clearChordHighlight();
+    updateMineStat();
+
+    // 恢复计时与笑脸
+    if (started && !over) {
+      if (timerId === null) startTimer();
+      faceEl.textContent = '🙂';
+    } else {
+      stopTimer();
+      if (!started) {
+        seconds = 0;
+        timeStat.textContent = '000';
+      }
+      if (won) faceEl.textContent = '😎';
+      else if (over) faceEl.textContent = '😵';
+      else faceEl.textContent = '🙂';
+    }
+
+    updateUndoBtn();
+  }
+
+  /* ==================== 统计栏 ==================== */
+  function formatTypeDisplay(type, n) {
+    if (mode === 'multi') {
+      const syms = { 1: '①', 2: '②', 3: '③' };
+      const cols = { 1: '#ff5c5c', 2: '#ffc978', 3: '#7dffa8' };
+      return { symbol: syms[type], value: n === 0 ? '0' : String(n), color: cols[type] };
+    }
+    if (type === 1) return { symbol: '+', value: String(n), color: '#ff5c5c' };
+    if (type === 2) return { symbol: '-', value: n === 0 ? '0' : '-' + n, color: '#5c9eff' };
+    if (type === 3) return { symbol: '+i', value: n + 'i', color: '#c084fc' };
+    return { symbol: '-i', value: n === 0 ? '0' : '-' + n + 'i', color: '#ffd166' };
+  }
+
+  function updateMineStat() {
+    if (!cfg) { mineStat.textContent = '—'; return; }
+
+    if (!started) {
+      if (mode === 'normal') {
+        mineStat.textContent = String(cfg.mines);
+      } else {
+        mineStat.innerHTML = '<span style="color:#5c6b82;font-size:14px;">—</span>';
+      }
+      return;
+    }
+
+    if (mode === 'normal') {
+      const left = Math.max(0, cfg.mines - flagCount);
+      mineStat.textContent = String(left);
+      return;
+    }
+
+    const totalCount = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const flaggedCount = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+    for (let r = 0; r < cfg.rows; r++) {
+      for (let c = 0; c < cfg.cols; c++) {
+        const cell = grid[r][c];
+        if (cell.mine !== 0) totalCount[cell.mine]++;
+        if (cell.flag !== 0) flaggedCount[cell.flag]++;
+      }
+    }
+
+    let types;
+    if (mode === 'plusminus') types = [1, 2];
+    else if (mode === 'multi') types = [1, 2, 3];
+    else types = [1, 2, 3, 4];
+
+    let html = '';
+    for (let i = 0; i < types.length; i++) {
+      const t = types[i];
+      const remaining = Math.max(0, totalCount[t] - flaggedCount[t]);
+      const d = formatTypeDisplay(t, remaining);
+      html += '<span class="stat-item" style="color:' + d.color + '">' +
+              '<span>' + d.symbol + '</span>' +
+              '<span>' + d.value + '</span>' +
+              '</span>';
+    }
+
+    mineStat.innerHTML = html;
+  }
+
+  /* ==================== 数字格式化 / 配色 ==================== */
+  function formatCount(count) {
+    if (mode === 'normal' || mode === 'multi') return String(count);
+    if (mode === 'plusminus') {
+      if (count === 0) return '0';
+      if (count > 0) return String(count);
+      return '−' + (-count);
+    }
+    return formatMagnitude(count);
+  }
+
+  function countColor(count) {
+    if (mode === 'normal') return NUM_COLORS[count] || '#c8d2e0';
+    if (mode === 'multi') return multiColor(count);
+    if (mode === 'plusminus') {
+      if (count === 0) return '#8b95a8';
+      if (count > 0) return NUM_COLORS[Math.min(count, 8)] || '#c8d2e0';
+      return NEG_COLORS[Math.min(-count, 8)] || '#c8d2e0';
+    }
+    return magColor(count);
+  }
+
+  /* =========================================================
+     图鉴
+     ========================================================= */
+  function makeCodexItem(numText, numColor, mines, value, label) {
+    const item = document.createElement('div');
+    item.className = 'codex-item';
+
+    const numEl = document.createElement('div');
+    numEl.className = 'codex-num' + (numText.length >= 3 ? ' long' : '');
+    numEl.textContent = numText;
+    numEl.style.color = numColor;
+    item.appendChild(numEl);
+
+    item.appendChild(createMiniGrid(mines, false));
+    item.addEventListener('click', () => openCodexDetail(value, label));
+    return item;
+  }
+
+  function buildCodex() {
+    codexListEl.innerHTML = '';
+    codexModeEl.textContent = mode === 'normal' ? '普通扫雷'
+                            : mode === 'multi' ? '多雷扫雷'
+                            : mode === 'plusminus' ? '正负扫雷'
+                            : '复扫雷';
+    codexDescEl.textContent = CODEX_DESC[mode];
+
+    if (mode === 'normal') {
+      for (let n = 0; n <= 8; n++) {
+        const mines = new Array(9).fill(0);
+        for (let i = 0; i < n; i++) mines[NEIGHBOR_ORDER[i]] = 1;
+        const color = n === 0 ? '#8b95a8' : (NUM_COLORS[n] || '#c8d2e0');
+        codexListEl.appendChild(makeCodexItem(String(n), color, mines, n, String(n)));
+      }
+    } else if (mode === 'multi') {
+      for (let n = 0; n <= 24; n++) {
+        const mines = new Array(9).fill(0);
+        let idx = 0;
+        let rem = n;
+        const c3 = Math.min(Math.floor(rem / 3), 8); rem -= c3 * 3;
+        const c2 = Math.min(Math.floor(rem / 2), 8 - c3); rem -= c2 * 2;
+        const c1 = Math.min(rem, 8 - c3 - c2);
+        for (let i = 0; i < c3; i++) mines[NEIGHBOR_ORDER[idx++]] = 3;
+        for (let i = 0; i < c2; i++) mines[NEIGHBOR_ORDER[idx++]] = 2;
+        for (let i = 0; i < c1; i++) mines[NEIGHBOR_ORDER[idx++]] = 1;
+        codexListEl.appendChild(makeCodexItem(String(n), multiColor(n), mines, n, String(n)));
+      }
+    } else if (mode === 'plusminus') {
+      for (let n = 8; n >= -8; n--) {
+        const mines = new Array(9).fill(0);
+        let label, color;
+
+        if (n > 0) {
+          for (let i = 0; i < n; i++) mines[NEIGHBOR_ORDER[i]] = 1;
+          label = String(n); color = NUM_COLORS[Math.min(n, 8)];
+        } else if (n < 0) {
+          const k = -n;
+          for (let i = 0; i < k; i++) mines[NEIGHBOR_ORDER[i]] = 2;
+          label = '−' + k; color = NEG_COLORS[Math.min(k, 8)];
+        } else {
+          mines[NEIGHBOR_ORDER[0]] = 1;
+          mines[NEIGHBOR_ORDER[1]] = 2;
+          label = '0'; color = '#8b95a8';
+        }
+        codexListEl.appendChild(makeCodexItem(label, color, mines, n, label));
+      }
+    } else {
+      for (const entry of COMPLEX_CODEX) {
+        const mines = new Array(9).fill(0);
+        let idx = 0;
+        for (let i = 0; i < entry.re; i++) mines[NEIGHBOR_ORDER[idx++]] = 1;
+        for (let i = 0; i < entry.im; i++) mines[NEIGHBOR_ORDER[idx++]] = 3;
+
+        const sq = entry.re * entry.re + entry.im * entry.im;
+        const label = formatMagnitude(sq);
+        const color = magColor(sq);
+        codexListEl.appendChild(makeCodexItem(label, color, mines, sq, label));
+      }
+    }
+  }
+
+  function enumerateCombinations(value) {
+    const results = [];
+
+    if (mode === 'normal') {
+      const n = value;
+      if (n >= 0 && n <= 8) results.push({ c1: n, c2: 0, c3: 0, c4: 0 });
+      return results;
+    }
+
+    if (mode === 'multi') {
+      for (let c3 = 0; c3 <= 8; c3++) {
+        for (let c2 = 0; c2 <= 8 - c3; c2++) {
+          for (let c1 = 0; c1 <= 8 - c3 - c2; c1++) {
+            if (c1 * 1 + c2 * 2 + c3 * 3 === value) {
+              results.push({ c1, c2, c3, c4: 0 });
+            }
+          }
+        }
+      }
+      return results;
+    }
+
+    if (mode === 'plusminus') {
+      const v = value;
+      for (let c1 = 0; c1 <= 8; c1++) {
+        for (let c2 = 0; c2 <= 8 - c1; c2++) {
+          if (c1 - c2 === v) results.push({ c1, c2, c3: 0, c4: 0 });
+        }
+      }
+      return results;
+    }
+
+    const target = value;
+    for (let c1 = 0; c1 <= 8; c1++) {
+      for (let c2 = 0; c2 <= 8 - c1; c2++) {
+        for (let c3 = 0; c3 <= 8 - c1 - c2; c3++) {
+          for (let c4 = 0; c4 <= 8 - c1 - c2 - c3; c4++) {
+            const re = c1 - c2;
+            const im = c3 - c4;
+            if (re * re + im * im === target) results.push({ c1, c2, c3, c4 });
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  function comboToMines(combo) {
+    const mines = new Array(9).fill(0);
+    let idx = 0;
+    for (let i = 0; i < combo.c1; i++) mines[NEIGHBOR_ORDER[idx++]] = 1;
+    for (let i = 0; i < combo.c2; i++) mines[NEIGHBOR_ORDER[idx++]] = 2;
+    for (let i = 0; i < combo.c3; i++) mines[NEIGHBOR_ORDER[idx++]] = 3;
+    for (let i = 0; i < combo.c4; i++) mines[NEIGHBOR_ORDER[idx++]] = 4;
+    return mines;
+  }
+
+  function comboToText(combo) {
+    const parts = [];
+    if (mode === 'normal') {
+      if (combo.c1 > 0) parts.push('雷×' + combo.c1);
+    } else if (mode === 'multi') {
+      if (combo.c1 > 0) parts.push('①×' + combo.c1);
+      if (combo.c2 > 0) parts.push('②×' + combo.c2);
+      if (combo.c3 > 0) parts.push('③×' + combo.c3);
+    } else {
+      if (combo.c1 > 0) parts.push('+1×' + combo.c1);
+      if (combo.c2 > 0) parts.push('−1×' + combo.c2);
+      if (combo.c3 > 0) parts.push('+i×' + combo.c3);
+      if (combo.c4 > 0) parts.push('−i×' + combo.c4);
+    }
+    return parts.length === 0 ? '无雷' : parts.join(' ');
+  }
+
+  function openCodexDetail(value, label) {
+    const combos = enumerateCombinations(value);
+    codexModalTitle.textContent = '数字 ' + label + ' 的全部组合（共 ' + combos.length + ' 种）';
+    codexModalBody.innerHTML = '';
+
+    if (combos.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'codex-empty';
+      empty.textContent = '没有找到组合';
+      codexModalBody.appendChild(empty);
+    } else {
+      const limited = combos.length > 120 ? combos.slice(0, 120) : combos;
+      for (const combo of limited) {
+        const item = document.createElement('div');
+        item.className = 'codex-combo-item';
+        item.appendChild(createMiniGrid(comboToMines(combo), true));
+
+        const txt = document.createElement('div');
+        txt.className = 'codex-combo-text';
+        txt.textContent = comboToText(combo);
+        item.appendChild(txt);
+
+        codexModalBody.appendChild(item);
+      }
+      if (combos.length > 120) {
+        const more = document.createElement('div');
+        more.className = 'codex-empty';
+        more.textContent = '…… 还有 ' + (combos.length - 120) + ' 种组合未显示';
+        codexModalBody.appendChild(more);
+      }
+    }
+
+    codexModal.classList.add('show');
+  }
+
+  function closeCodexModal() { codexModal.classList.remove('show'); }
+
+  document.getElementById('codexModalClose').addEventListener('click', closeCodexModal);
+  codexModal.addEventListener('click', (e) => { if (e.target === codexModal) closeCodexModal(); });
+
+  /* =========================================================
+     教程
+     ========================================================= */
+  function buildTutorial() {
+    const data = TUTORIALS[mode];
+    tutorialTitle.textContent = data.title;
+    tutorialBody.innerHTML = '';
+
+    for (const sec of data.sections) {
+      const section = document.createElement('div');
+      section.className = 'tutorial-section' + (sec.strategy ? ' strategy' : '');
+
+      const h = document.createElement('div');
+      h.className = 'tutorial-heading';
+      h.textContent = sec.heading;
+      section.appendChild(h);
+
+      if (sec.text) {
+        const t = document.createElement('div');
+        t.className = 'tutorial-text';
+        t.innerHTML = sec.text;
+        section.appendChild(t);
+      }
+
+      if (sec.example) {
+        const ex = document.createElement('div');
+        ex.className = 'tutorial-example';
+        ex.appendChild(createMiniGrid(sec.example.mines, true));
+
+        const label = document.createElement('div');
+        label.className = 'tutorial-example-label';
+        label.innerHTML = sec.example.desc +
+          '<br><span class="tutorial-example-num" style="color:' + sec.example.numColor + '">数字 = ' + sec.example.num + '</span>';
+        ex.appendChild(label);
+        section.appendChild(ex);
+      }
+
+      if (sec.symbols) {
+        const wrap = document.createElement('div');
+        wrap.className = 'tutorial-symbols';
+        for (const s of sec.symbols) {
+          const sym = document.createElement('span');
+          sym.className = 'tutorial-symbol';
+
+          const dot = document.createElement('span');
+          dot.className = 'tutorial-dot';
+          dot.style.background = s.color;
+          sym.appendChild(dot);
+
+          const txt = document.createElement('span');
+          txt.textContent = s.text;
+          txt.style.color = s.color;
+          sym.appendChild(txt);
+          wrap.appendChild(sym);
+        }
+        section.appendChild(wrap);
+      }
+
+      tutorialBody.appendChild(section);
+    }
+  }
+
+  function openTutorial() {
+    buildTutorial();
+    tutorialModal.classList.add('show');
+    tutorialBody.scrollTop = 0;
+  }
+  function closeTutorial() { tutorialModal.classList.remove('show'); }
+
+  tutorialBtn.addEventListener('click', openTutorial);
+  document.getElementById('tutorialClose').addEventListener('click', closeTutorial);
+  tutorialModal.addEventListener('click', (e) => { if (e.target === tutorialModal) closeTutorial(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (tutorialModal.classList.contains('show')) closeTutorial();
+      else if (codexModal.classList.contains('show')) closeCodexModal();
+      return;
+    }
+
+    // Ctrl+Z / Z 撤回（忽略输入框和弹窗）
+    if ((e.ctrlKey && (e.key === 'z' || e.key === 'Z')) ||
+        (!e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z'))) {
+      if (tutorialModal.classList.contains('show') || codexModal.classList.contains('show')) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      undo();
+    }
+  });
+
+  /* =========================================================
+     数字计算器
+     ========================================================= */
+  function calcFromValues(vals) {
+    if (mode === 'normal') {
+      let n = 0;
+      for (let i = 0; i < vals.length; i++) if (vals[i] === 1) n++;
+      return { display: String(n), color: n === 0 ? '#8b95a8' : (NUM_COLORS[Math.min(n, 8)] || '#c8d2e0') };
+    }
+    if (mode === 'multi') {
+      let sum = 0;
+      for (let i = 0; i < vals.length; i++) {
+        if (vals[i] === 1) sum += 1;
+        else if (vals[i] === 2) sum += 2;
+        else if (vals[i] === 3) sum += 3;
+      }
+      return { display: String(sum), color: multiColor(sum) };
+    }
+    if (mode === 'plusminus') {
+      let sum = 0;
+      for (let i = 0; i < vals.length; i++) {
+        if (vals[i] === 1) sum++;
+        else if (vals[i] === 2) sum--;
+      }
+      if (sum === 0) return { display: '0', color: '#8b95a8' };
+      if (sum > 0) return { display: String(sum), color: NUM_COLORS[Math.min(sum, 8)] || '#c8d2e0' };
+      return { display: '−' + (-sum), color: NEG_COLORS[Math.min(-sum, 8)] || '#c8d2e0' };
+    }
+    let re = 0, im = 0;
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i];
+      if (v === 1) re++;
+      else if (v === 2) re--;
+      else if (v === 3) im++;
+      else if (v === 4) im--;
+    }
+    const n = re * re + im * im;
+    return { display: formatMagnitude(n), color: magColor(n) };
+  }
+
+  function buildCalculator() {
+    calcGridEl.innerHTML = '';
+    calcEls = [];
+    for (let i = 0; i < 9; i++) {
+      const el = document.createElement('div');
+      el.className = 'calc-cell';
+      if (i === 4) {
+        el.classList.add('calc-center');
+      } else {
+        el.classList.add('calc-clickable');
+        el.dataset.idx = i;
+        el.addEventListener('click', () => cycleCalcCell(i));
+      }
+      calcGridEl.appendChild(el);
+      calcEls.push(el);
+    }
+    updateCalculator();
+  }
+
+  function cycleCalcCell(i) {
+    const max = MINE_TYPES[mode].length;
+    calcState[i] = (calcState[i] + 1) % (max + 1);
+    updateCalculator();
+  }
+
+  function updateCalculator() {
+    const types = MINE_TYPES[mode];
+    for (let i = 0; i < 9; i++) {
+      if (i === 4) continue;
+      const el = calcEls[i];
+      const v = calcState[i];
+      el.className = 'calc-cell calc-clickable';
+      el.textContent = '';
+      el.style.color = '';
+      if (v !== 0) {
+        el.classList.add('has-mine');
+        const t = types[v - 1];
+        el.textContent = t.symbol;
+        el.style.color = t.color;
+        if (t.symbol.length >= 3) el.classList.add('font-sm');
+        else if (t.symbol.length === 2) el.classList.add('font-md');
+      }
+    }
+
+    const vals = [];
+    for (let i = 0; i < 9; i++) if (i !== 4) vals.push(calcState[i]);
+    const res = calcFromValues(vals);
+
+    const center = calcEls[4];
+    center.className = 'calc-cell calc-center';
+    center.textContent = res.display;
+    center.style.color = res.color;
+    if (res.display.length >= 4) center.classList.add('font-sm');
+    else if (res.display.length === 3) center.classList.add('font-md');
+
+    calcHintEl.textContent = '点击周围 8 格设置雷，中间显示对应数字';
+  }
+
+  function resetCalculator() {
+    calcState = [0,0,0,0,0,0,0,0,0];
+    updateCalculator();
+  }
+
+  calcResetEl.addEventListener('click', resetCalculator);
+
+  /* =========================================================
+     复平面图解计算器
+     ========================================================= */
+  const CP_RANGE = 8;
+
+  function getCanvasMetrics() {
+    const canvas = document.getElementById('complexCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    const unit = Math.min(w, h) / (2 * CP_RANGE + 1);
+    return { canvas, w, h, cx: w / 2, cy: h / 2, unit };
+  }
+
+  function drawComplexPlane() {
+    const canvas = document.getElementById('complexCanvas');
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 10) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = rect.width, h = rect.height;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const unit = Math.min(w, h) / (2 * CP_RANGE + 1);
+    const toX = (re) => cx + re * unit;
+    const toY = (im) => cy - im * unit;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.055)';
+    ctx.lineWidth = 1;
+    for (let i = -CP_RANGE; i <= CP_RANGE; i++) {
+      ctx.beginPath(); ctx.moveTo(toX(i), toY(-CP_RANGE)); ctx.lineTo(toX(i), toY(CP_RANGE)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(toX(-CP_RANGE), toY(i)); ctx.lineTo(toX(CP_RANGE), toY(i)); ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(toX(-CP_RANGE), toY(0)); ctx.lineTo(toX(CP_RANGE), toY(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(toX(0), toY(-CP_RANGE)); ctx.lineTo(toX(0), toY(CP_RANGE)); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillText('Re', toX(CP_RANGE) - 3, toY(0) + 4);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('Im', toX(0) + 4, toY(CP_RANGE) + 2);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath(); ctx.arc(toX(0), toY(0), 2.5, 0, Math.PI * 2); ctx.fill();
+
+    if (!complexPoint) return;
+
+    const re = complexPoint.re, im = complexPoint.im;
+    const px = toX(re), py = toY(im);
+    const magSq = re * re + im * im;
+    const col = magColor(magSq);
+
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 190, 70, 0.9)';
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, toY(0)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(toX(0), py); ctx.stroke();
+    ctx.restore();
+
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(toX(0), toY(0)); ctx.lineTo(px, py); ctx.stroke();
+    ctx.lineCap = 'butt';
+
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 190, 70, 0.9)';
+    ctx.beginPath(); ctx.arc(px, toY(0), 3, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath(); ctx.arc(toX(0), py, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function updateComplexInfo() {
+    const elC = document.getElementById('ciComplex');
+    const elRe = document.getElementById('ciRe');
+    const elIm = document.getElementById('ciIm');
+    const elMag = document.getElementById('ciMag');
+    if (!elC) return;
+
+    if (!complexPoint) {
+      elC.textContent = '—'; elC.style.color = '';
+      elRe.textContent = '—'; elRe.style.color = '';
+      elIm.textContent = '—'; elIm.style.color = '';
+      elMag.textContent = '—'; elMag.style.color = '';
+      return;
+    }
+
+    const re = complexPoint.re, im = complexPoint.im;
+    const magSq = re * re + im * im;
+    const col = magColor(magSq);
+
+    elC.textContent = formatComplex(re, im);
+    elRe.textContent = re;
+    elIm.textContent = im;
+    elMag.textContent = formatMagnitude(magSq);
+
+    elC.style.color = col;
+    elRe.style.color = '#ffc046';
+    elIm.style.color = '#ffffff';
+    elMag.style.color = col;
+  }
+
+  function handleCanvasClick(e) {
+    const m = getCanvasMetrics();
+    const rect = m.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    let re = Math.round((x - m.cx) / m.unit);
+    let im = Math.round((m.cy - y) / m.unit);
+
+    re = Math.max(-CP_RANGE, Math.min(CP_RANGE, re));
+    im = Math.max(-CP_RANGE, Math.min(CP_RANGE, im));
+
+    complexPoint = { re, im };
+    updateComplexInfo();
+    drawComplexPlane();
+  }
+
+  function initComplexCanvas() {
+    const canvas = document.getElementById('complexCanvas');
+    if (!canvas) return;
+    if (!canvas.dataset.bound) {
+      canvas.addEventListener('click', handleCanvasClick);
+      canvas.dataset.bound = '1';
+    }
+  }
+
+  function updateComplexCalcVisibility() {
+    if (mode === 'complex') {
+      complexCalcEl.classList.add('visible');
+      setTimeout(() => {
+        initComplexCanvas();
+        drawComplexPlane();
+        updateComplexInfo();
+      }, 30);
+    } else {
+      complexCalcEl.classList.remove('visible');
+      complexPoint = null;
+    }
+  }
+
+  /* ==================== 数字计算（游戏主逻辑） ==================== */
+  function computeNumbers() {
+    for (let r = 0; r < cfg.rows; r++) {
+      for (let c = 0; c < cfg.cols; c++) {
+        const cell = grid[r][c];
+        if (cell.mine !== 0) continue;
+
+        let hasMine = false;
+        let cnt = 0, sum = 0, re = 0, im = 0;
+
+        forNeighbors(r, c, (nr, nc) => {
+          const m = grid[nr][nc].mine;
+          if (m === 0) return;
+          hasMine = true;
+
+          if (mode === 'normal') cnt++;
+          else if (mode === 'plusminus') sum += (m === 1 ? 1 : -1);
+          else if (mode === 'multi') sum += m;
+          else {
+            if (m === 1) re++;
+            else if (m === 2) re--;
+            else if (m === 3) im++;
+            else if (m === 4) im--;
+          }
+        });
+
+        cell.blank = !hasMine;
+        if (mode === 'normal') cell.count = cnt;
+        else if (mode === 'plusminus') cell.count = sum;
+        else if (mode === 'multi') cell.count = sum;
+        else cell.count = re * re + im * im;
+      }
+    }
+  }
+
+  /* ==================== 配置获取 ==================== */
+  function getCurrentConfig() {
+    if (currentLevel === 'custom') {
+      const cols = Math.max(5, Math.min(40, parseInt(customColsEl.value) || 12));
+      const rows = Math.max(5, Math.min(30, parseInt(customRowsEl.value) || 12));
+      const maxMines = cols * rows - 9;
+      const mines = Math.max(1, Math.min(maxMines, parseInt(customMinesEl.value) || 20));
+      return { cols, rows, mines, maxCell: 38 };
+    }
+    return LEVELS[currentLevel];
+  }
+
+  /* ==================== 新游戏 ==================== */
+  function newGame() {
+    cfg = getCurrentConfig();
+
+    started = false; over = false; won = false;
+    revealedCount = 0; flagCount = 0; seconds = 0;
+
+    history = [];
+    updateUndoBtn();
+
+    stopTimer();
+    timeStat.textContent = '000';
+    faceEl.textContent = '🙂';
+    tipText.textContent = TIPS[mode];
+
+    makeGrid();
+    buildBoard();
+    layout();
+    updateMineStat();
+    resetCalculator();
+  }
+
+  function makeGrid() {
+    grid = [];
+    for (let r = 0; r < cfg.rows; r++) {
+      const row = [];
+      for (let c = 0; c < cfg.cols; c++) {
+        row.push({ mine: 0, revealed: false, flag: 0, count: 0, blank: false });
+      }
+      grid.push(row);
+    }
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    cellEls = [];
+    const frag = document.createDocumentFragment();
+
+    for (let r = 0; r < cfg.rows; r++) {
+      const rowEls = [];
+      for (let c = 0; c < cfg.cols; c++) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'cell';
+        el.dataset.r = r;
+        el.dataset.c = c;
+        el.tabIndex = -1;
+        frag.appendChild(el);
+        rowEls.push(el);
+      }
+      cellEls.push(rowEls);
+    }
+    boardEl.appendChild(frag);
+  }
+
+  function layout() {
+    const wide = window.innerWidth > 920;
+    const availW = Math.min(window.innerWidth - (wide ? 330 : 48), 1020);
+    const availH = window.innerHeight - 500;
+
+    const wByW = (availW - GAP * (cfg.cols - 1)) / cfg.cols;
+    const hByH = (Math.max(availH, 150) - GAP * (cfg.rows - 1)) / cfg.rows;
+
+    let size = Math.floor(Math.min(wByW, hByH));
+    size = Math.max(14, Math.min(cfg.maxCell, size));
+
+    size = Math.round(size * zoomLevel);
+
+    boardEl.style.setProperty('--cell', size + 'px');
+    boardEl.style.gridTemplateColumns = `repeat(${cfg.cols}, ${size}px)`;
+
+    if (mode === 'complex') setTimeout(drawComplexPlane, 60);
+  }
+
+  /* ==================== 渲染单元格 ==================== */
+  function updateCell(r, c) {
+    const cell = grid[r][c];
+    const el = cellEls[r][c];
+    el.className = 'cell';
+    el.textContent = '';
+    el.style.color = '';
+
+    if (cell.revealed) {
+      el.classList.add('revealed');
+
+      if (cell.mine !== 0) {
+        if (mode === 'normal') {
+          el.textContent = '💣';
+          el.classList.add('mine-shown');
+        } else {
+          const t = MINE_TYPES[mode][cell.mine - 1];
+          el.textContent = t.symbol;
+          el.style.color = t.color;
+          el.classList.add('mine-shown');
+          if (t.symbol.length >= 3) el.classList.add('font-sm');
+          else if (t.symbol.length === 2) el.classList.add('font-md');
+        }
+        return;
+      }
+
+      if (cell.blank) return;
+
+      const text = formatCount(cell.count);
+      el.textContent = text;
+      el.style.color = countColor(cell.count);
+
+      if (text.length >= 4) el.classList.add('font-sm');
+      else if (text.length === 3) el.classList.add('font-md');
+      return;
+    }
+
+    if (cell.flag !== 0) {
+      const t = MINE_TYPES[mode][cell.flag - 1];
+      el.textContent = t.symbol;
+      el.style.color = t.color;
+      if (t.symbol.length >= 3) el.classList.add('font-sm');
+      else if (t.symbol.length === 2) el.classList.add('font-md');
+    }
+  }
+
+  /* ==================== 计时器 ==================== */
+  function startTimer() {
+    stopTimer();
+    timerId = setInterval(() => {
+      seconds++;
+      if (seconds > 999) seconds = 999;
+      timeStat.textContent = pad3(seconds);
+    }, 1000);
+  }
+  function stopTimer() {
+    if (timerId !== null) { clearInterval(timerId); timerId = null; }
+  }
+
+  /* ==================== 布雷 ==================== */
+  function placeMines(sr, sc) {
+    const totalCells = cfg.rows * cfg.cols;
+    let mineIndices;
+    let typeRng;
+
+    if (currentSeed !== null) {
+      const rng = mulberry32(hashString(currentSeed));
+
+      const all = [];
+      for (let i = 0; i < totalCells; i++) all.push(i);
+
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = all[i]; all[i] = all[j]; all[j] = tmp;
+      }
+
+      mineIndices = all.slice(0, cfg.mines);
+
+      const srIdx = sr * cfg.cols + sc;
+      const idx = mineIndices.indexOf(srIdx);
+      if (idx !== -1) {
+        const mineSet = new Set(mineIndices);
+        const candidates = [];
+        for (let i = 0; i < totalCells; i++) {
+          if (!mineSet.has(i)) candidates.push(i);
+        }
+        if (candidates.length > 0) {
+          const target = candidates[Math.floor(rng() * candidates.length)];
+          mineIndices[idx] = target;
+        }
+      }
+
+      typeRng = mulberry32(hashString(currentSeed) ^ 0x9E3779B9);
+    } else {
+      const forbidden = new Set();
+      forbidden.add(sr * cfg.cols + sc);
+      forNeighbors(sr, sc, (r, c) => forbidden.add(r * cfg.cols + c));
+
+      const spots = [];
+      for (let i = 0; i < totalCells; i++) {
+        if (!forbidden.has(i)) spots.push(i);
+      }
+
+      for (let i = spots.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = spots[i]; spots[i] = spots[j]; spots[j] = tmp;
+      }
+
+      mineIndices = spots.slice(0, Math.min(cfg.mines, spots.length));
+      typeRng = Math.random;
+    }
+
+    for (const idx of mineIndices) {
+      const r = Math.floor(idx / cfg.cols);
+      const c = idx % cfg.cols;
+      if (mode === 'normal') grid[r][c].mine = 1;
+      else if (mode === 'plusminus') grid[r][c].mine = typeRng() < 0.5 ? 1 : 2;
+      else if (mode === 'multi') grid[r][c].mine = 1 + Math.floor(typeRng() * 3);
+      else grid[r][c].mine = 1 + Math.floor(typeRng() * 4);
+    }
+
+    computeNumbers();
+  }
+
+  function startGame(r, c) {
+    placeMines(r, c);
+    started = true;
+    startTimer();
+    updateMineStat();
+  }
+
+  /* ==================== 翻开 ==================== */
+  function revealCell(r, c) {
+    const stack = [[r, c]];
+    while (stack.length) {
+      const cur = stack.pop();
+      const cr = cur[0], cc = cur[1];
+      const cell = grid[cr][cc];
+      if (cell.revealed || cell.flag !== 0) continue;
+
+      cell.revealed = true;
+      revealedCount++;
+      updateCell(cr, cc);
+
+      if (cell.mine !== 0) continue;
+
+      if (cell.blank) {
+        forNeighbors(cr, cc, (nr, nc) => {
+          const n = grid[nr][nc];
+          if (!n.revealed && n.flag === 0) stack.push([nr, nc]);
+        });
+      }
+    }
+  }
+
+  /* ==================== 左键 ==================== */
+  function handleLeft(r, c) {
+    if (over) return;
+    const cell = grid[r][c];
+
+    if (cell.revealed) {
+      const info = getChordInfo(r, c);
+      if (!info.can) return;
+      pushHistory();
+      chord(r, c);
+      return;
+    }
+    if (cell.flag !== 0) return;
+
+    pushHistory();
+
+    if (!started) startGame(r, c);
+    if (cell.mine !== 0) { boom(r, c); return; }
+
+    revealCell(r, c);
+    checkWin();
+    maybeAutoFlag();
+  }
+
+  /* ==================== 右键 / 长按 ==================== */
+  function cycleFlag(r, c) {
+    if (over) return;
+    const cell = grid[r][c];
+    if (cell.revealed) return;
+
+    pushHistory();
+
+    if (mode === 'normal') {
+      cell.flag = cell.flag ? 0 : 1;
+    } else if (mode === 'plusminus') {
+      if (cell.flag === 0) cell.flag = 1;
+      else if (cell.flag === 1) cell.flag = 2;
+      else cell.flag = 0;
+    } else if (mode === 'multi') {
+      cell.flag = (cell.flag + 1) % 4;
+    } else {
+      cell.flag = (cell.flag + 1) % 5;
+    }
+
+    recountFlags();
+    updateCell(r, c);
+    updateMineStat();
+    clearChordHighlight();
+    maybeAutoFlag();
+  }
+
+  /* ==================== 快速展开 ==================== */
+  function getChordInfo(r, c) {
+    const cell = grid[r][c];
+    if (!cell.revealed || cell.mine !== 0) return { can: false, hidden: [] };
+
+    const hidden = [];
+    let allMinesFlagged = true;
+    let wrongFlag = false;
+
+    forNeighbors(r, c, (nr, nc) => {
+      const n = grid[nr][nc];
+      if (n.revealed) return;
+
+      if (n.mine !== 0) {
+        if (n.flag !== n.mine) allMinesFlagged = false;
+      } else {
+        if (n.flag === 0) hidden.push([nr, nc]);
+        else wrongFlag = true;
+      }
+    });
+
+    if (!allMinesFlagged || wrongFlag || hidden.length === 0) return { can: false, hidden: [] };
+    return { can: true, hidden: hidden };
+  }
+
+  function chord(r, c) {
+    const cell = grid[r][c];
+    if (!cell.revealed || cell.mine !== 0) return;
+
+    const info = getChordInfo(r, c);
+    if (!info.can) return;
+
+    for (let i = 0; i < info.hidden.length; i++) {
+      revealCell(info.hidden[i][0], info.hidden[i][1]);
+    }
+    clearChordHighlight();
+    checkWin();
+    maybeAutoFlag();
+  }
+
+  /* ==================== 自动标雷 ==================== */
+  function runAutoFlag() {
+    if (over || !started) return 0;
+    if (mode === 'complex') return runAutoFlagComplex();
+    if (mode === 'multi') return runAutoFlagMulti();
+    return runAutoFlagSimple();
+  }
+
+  function runAutoFlagSimple() {
+    let changed = true, guard = 0, total = 0;
+
+    while (changed && guard++ < 3000) {
+      changed = false;
+
+      for (let r = 0; r < cfg.rows; r++) {
+        for (let c = 0; c < cfg.cols; c++) {
+          const cell = grid[r][c];
+          if (!cell.revealed || cell.mine !== 0) continue;
+
+          let fp = 0, fn = 0;
+          const hidden = [];
+
+          forNeighbors(r, c, (nr, nc) => {
+            const n = grid[nr][nc];
+            if (n.revealed) return;
+            if (n.flag === 1) fp++;
+            else if (n.flag === 2) fn++;
+            else hidden.push([nr, nc]);
+          });
+
+          const u = hidden.length;
+          if (u === 0) continue;
+
+          let flagType = 0;
+
+          if (mode === 'normal') {
+            if (cell.count - fp === u) flagType = 1;
+          } else {
+            const R = cell.count - fp + fn;
+            if (R > 0 && R === u) flagType = 1;
+            else if (R < 0 && -R === u) flagType = 2;
+          }
+
+          if (flagType === 0) continue;
+
+          for (let i = 0; i < u; i++) {
+            const hr = hidden[i][0], hc = hidden[i][1];
+            const n = grid[hr][hc];
+            if (n.revealed || n.flag !== 0) continue;
+            if (n.mine !== flagType) continue;
+
+            n.flag = flagType;
+            total++; changed = true;
+
+            updateCell(hr, hc);
+            const el = cellEls[hr][hc];
+            el.classList.add('pop');
+            setTimeout(((node) => () => node.classList.remove('pop'))(el), 360);
+          }
+        }
+      }
+    }
+
+    if (total > 0) {
+      recountFlags();
+      updateMineStat();
+      clearChordHighlight();
+      checkWin();
+    }
+    return total;
+  }
+
+  function runAutoFlagMulti() {
+    let changed = true, guard = 0, total = 0;
+
+    while (changed && guard++ < 3000) {
+      changed = false;
+
+      for (let r = 0; r < cfg.rows; r++) {
+        for (let c = 0; c < cfg.cols; c++) {
+          const cell = grid[r][c];
+          if (!cell.revealed || cell.mine !== 0) continue;
+
+          let sum = 0;
+          const unknown = [];
+
+          forNeighbors(r, c, (nr, nc) => {
+            const n = grid[nr][nc];
+            if (n.revealed) return;
+            if (n.flag !== 0) sum += n.flag;
+            else unknown.push([nr, nc]);
+          });
+
+          const U = unknown.length;
+          if (U === 0) continue;
+          const R = cell.count - sum;
+          if (R <= 0 || R > 3 * U) continue;
+
+          let type = 0;
+          if (R === U) type = 1;
+          else if (R === 3 * U) type = 3;
+          else if (U === 1 && R >= 1 && R <= 3) type = R;
+
+          if (type === 0) continue;
+
+          for (let i = 0; i < U; i++) {
+            const hr = unknown[i][0], hc = unknown[i][1];
+            const n = grid[hr][hc];
+            if (n.revealed || n.flag !== 0) continue;
+            if (n.mine !== type) continue;
+
+            n.flag = type;
+            total++; changed = true;
+
+            updateCell(hr, hc);
+            const el = cellEls[hr][hc];
+            el.classList.add('pop');
+            setTimeout(((node) => () => node.classList.remove('pop'))(el), 360);
+          }
+        }
+      }
+    }
+
+    if (total > 0) {
+      recountFlags();
+      updateMineStat();
+      clearChordHighlight();
+      checkWin();
+    }
+    return total;
+  }
+
+  function runAutoFlagComplex() {
+    let changed = true, guard = 0, total = 0;
+    const deltas = [[0,0], [1,0], [-1,0], [0,1], [0,-1]];
+
+    while (changed && guard++ < 500) {
+      changed = false;
+
+      for (let r = 0; r < cfg.rows; r++) {
+        for (let c = 0; c < cfg.cols; c++) {
+          const cell = grid[r][c];
+          if (!cell.revealed || cell.mine !== 0) continue;
+
+          let a = 0, b = 0;
+          const unknown = [];
+
+          forNeighbors(r, c, (nr, nc) => {
+            const n = grid[nr][nc];
+            if (n.revealed) return;
+            if (n.flag !== 0) {
+              if (n.flag === 1) a++;
+              else if (n.flag === 2) a--;
+              else if (n.flag === 3) b++;
+              else if (n.flag === 4) b--;
+            } else unknown.push([nr, nc]);
+          });
+
+          if (unknown.length !== 1) continue;
+
+          const targetSq = cell.count;
+          const options = [];
+          for (let i = 0; i < 5; i++) {
+            const X = a + deltas[i][0];
+            const Y = b + deltas[i][1];
+            if (X * X + Y * Y === targetSq) options.push(i);
+          }
+
+          if (options.length !== 1) continue;
+          const type = options[0];
+          if (type === 0) continue;
+
+          const ur = unknown[0][0], uc = unknown[0][1];
+          const n = grid[ur][uc];
+          if (n.revealed || n.flag !== 0) continue;
+          if (n.mine !== type) continue;
+
+          n.flag = type;
+          total++; changed = true;
+
+          updateCell(ur, uc);
+          const el = cellEls[ur][uc];
+          el.classList.add('pop');
+          setTimeout(((node) => () => node.classList.remove('pop'))(el), 360);
+        }
+      }
+    }
+
+    if (total > 0) {
+      recountFlags();
+      updateMineStat();
+      clearChordHighlight();
+      checkWin();
+    }
+    return total;
+  }
+
+  function maybeAutoFlag() {
+    if (autoFlagOn && !over) runAutoFlag();
+  }
+
+  /* ==================== 爆炸 ==================== */
+  function boom(r, c) {
+    if (over) return;
+    over = true; won = false;
+    stopTimer();
+    faceEl.textContent = '😵';
+    clearChordHighlight();
+
+    for (let rr = 0; rr < cfg.rows; rr++) {
+      for (let cc = 0; cc < cfg.cols; cc++) {
+        const cell = grid[rr][cc];
+
+        if (cell.flag !== 0 && cell.flag !== cell.mine) {
+          cellEls[rr][cc].classList.add('wrong');
+          continue;
+        }
+        if (cell.mine !== 0 && cell.flag === 0) {
+          cell.revealed = true;
+          updateCell(rr, cc);
+        }
+      }
+    }
+    cellEls[r][c].classList.add('boom');
+  }
+
+  /* ==================== 胜利 ==================== */
+  function checkWin() {
+    if (over) return;
+    if (revealedCount === cfg.rows * cfg.cols - cfg.mines) {
+      over = true; won = true;
+      stopTimer();
+      faceEl.textContent = '😎';
+      clearChordHighlight();
+
+      for (let r = 0; r < cfg.rows; r++) {
+        for (let c = 0; c < cfg.cols; c++) {
+          const cell = grid[r][c];
+          if (cell.mine !== 0 && cell.flag === 0) {
+            cell.flag = cell.mine;
+            updateCell(r, c);
+          }
+        }
+      }
+      recountFlags();
+      updateMineStat();
+    }
+  }
+
+  /* ==================== 自动标雷开关 ==================== */
+  function setAutoFlag(on) {
+    autoFlagOn = on;
+    autoSwitch.classList.toggle('on', on);
+    autoSwitch.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (on) maybeAutoFlag();
+  }
+
+  autoSwitch.addEventListener('click', () => setAutoFlag(!autoFlagOn));
+  autoSwitch.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      setAutoFlag(!autoFlagOn);
+    }
+  });
+
+  /* ==================== 撤回按钮 ==================== */
+  undoBtn.addEventListener('click', undo);
+
+  /* ==================== 缩放 ==================== */
+  function setZoom(z) {
+    z = Math.max(1.0, Math.min(10.0, Math.round(z * 100) / 100));
+    zoomLevel = z;
+    zoomValueEl.textContent = Math.round(z * 100) + '%';
+    zoomInBtn.disabled = z >= 10.0;
+    zoomOutBtn.disabled = z <= 1.0;
+    if (cfg) layout();
+  }
+
+  zoomInBtn.addEventListener('click', () => setZoom(zoomLevel + 0.5));
+  zoomOutBtn.addEventListener('click', () => setZoom(zoomLevel - 0.5));
+  zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+
+  /* ==================== 种子 / 随机 ==================== */
+  function applySeed() {
+    const s = seedInput.value.trim();
+    currentSeed = s === '' ? randomSeedString() : s;
+    seedInput.value = currentSeed;
+    newGame();
+  }
+
+  function applyRandom() {
+    currentSeed = null;
+    seedInput.value = '';
+    newGame();
+  }
+
+  seedApplyBtn.addEventListener('click', applySeed);
+  randomBtn.addEventListener('click', applyRandom);
+  seedInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applySeed(); }
+  });
+
+  /* ==================== 自定义尺寸 ==================== */
+  let customTimer = null;
+  function onCustomChange() {
+    if (customTimer) clearTimeout(customTimer);
+    customTimer = setTimeout(() => {
+      if (currentLevel === 'custom') newGame();
+    }, 400);
+  }
+
+  customColsEl.addEventListener('input', onCustomChange);
+  customRowsEl.addEventListener('input', onCustomChange);
+  customMinesEl.addEventListener('input', onCustomChange);
+
+  /* ==================== 事件绑定 ==================== */
+  boardEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const el = e.target.closest('.cell');
+    if (!el) return;
+    cycleFlag(+el.dataset.r, +el.dataset.c);
+  });
+
+  let suppressClick = false;
+
+  boardEl.addEventListener('click', (e) => {
+    if (suppressClick) { suppressClick = false; return; }
+    const el = e.target.closest('.cell');
+    if (!el) return;
+    handleLeft(+el.dataset.r, +el.dataset.c);
+  });
+
+  boardEl.addEventListener('mouseover', (e) => {
+    clearChordHighlight();
+    if (over) return;
+
+    const el = e.target.closest('.cell');
+    if (!el) return;
+
+    const r = +el.dataset.r, c = +el.dataset.c;
+    const info = getChordInfo(r, c);
+    if (info.can) el.classList.add('chord-ready');
+  });
+
+  boardEl.addEventListener('mouseleave', clearChordHighlight);
+
+  let touchTimer = null;
+
+  boardEl.addEventListener('touchstart', (e) => {
+    const el = e.target.closest('.cell');
+    if (!el) return;
+    const r = +el.dataset.r, c = +el.dataset.c;
+
+    touchTimer = setTimeout(() => {
+      touchTimer = null;
+      suppressClick = true;
+      cycleFlag(r, c);
+      if (navigator.vibrate) { try { navigator.vibrate(25); } catch (_) {} }
+      setTimeout(() => { suppressClick = false; }, 450);
+    }, 420);
+  }, { passive: true });
+
+  ['touchend', 'touchcancel', 'touchmove'].forEach(evt => {
+    boardEl.addEventListener(evt, () => {
+      if (touchTimer !== null) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    }, { passive: true });
+  });
+
+  faceEl.addEventListener('click', () => newGame());
+
+  /* 模式切换 */
+  document.querySelectorAll('.md').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (mode === btn.dataset.mode) return;
+      document.querySelectorAll('.md').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+      complexPoint = null;
+      buildCodex();
+      updateComplexCalcVisibility();
+      newGame();
+    });
+  });
+
+  /* 难度切换 */
+  document.querySelectorAll('.lv').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lv').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLevel = btn.dataset.level;
+      if (currentLevel === 'custom') {
+        customRow.classList.add('show');
+      } else {
+        customRow.classList.remove('show');
+      }
+      newGame();
+    });
+  });
+
+  /* 窗口尺寸 */
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      layout();
+      if (mode === 'complex') drawComplexPlane();
+    }, 120);
+  });
+
+  /* ==================== 启动 ==================== */
+  buildCalculator();
+  buildCodex();
+  updateComplexCalcVisibility();
+  setZoom(1.0);
+  newGame();
+})();
+</script>
+</body>
+</html>
